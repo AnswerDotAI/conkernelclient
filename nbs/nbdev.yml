@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "conkernelclient"
+  site-url: "https://AnswerDotAI.github.io/conkernelclient"
+  description: "Concurrent-safe Jupyter KernelClient"
+  repo-branch: main
+  repo-url: "https://github.com/AnswerDotAI/conkernelclient"
