@@ -34,15 +34,6 @@ Session.send = _send
 
 # %% ../nbs/00_core.ipynb #d6a5fa6a
 class ConKernelClient(AsyncKernelClient):
-    async def control(self, cmd, **kw):
-        msg = self.session.msg(cmd, content=kw)
-        self.control_channel.send(msg)
-        return dict2obj(await self.get_control_msg(timeout=2))['content']
-
-    async def create_subshell(self): return await self.control("create_subshell_request")
-    async def list_subshells(self): return await self.control("list_subshell_request")
-    async def delete_subshell(self, subsh_id:str): return await self.control("delete_subshell_request", subshell_id=subsh_id)
-
     async def start_channels(self, shell:bool=True, iopub:bool=True, stdin:bool=True, hb:bool=True, control:bool=True):
         super().start_channels(shell=shell, iopub=iopub, stdin=stdin, hb=hb, control=control)
         await self.wait_for_ready()
