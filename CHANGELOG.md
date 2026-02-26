@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.4
+
+### New Features
+
+- Ensure shell reader task is fully started before returning from `start_channels` ([#2](https://github.com/AnswerDotAI/conkernelclient/issues/2))
+
+
 ## 0.0.3
 
 - Add readme
