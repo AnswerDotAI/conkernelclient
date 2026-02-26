@@ -20,7 +20,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [ "fastcore" ]
+dev = [
+  "fastcore",
+  "ipykernel",
+]
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/conkernelclient"
