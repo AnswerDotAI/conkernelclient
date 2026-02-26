@@ -38,7 +38,9 @@ class ConKernelClient(AsyncKernelClient):
         super().start_channels(shell=shell, iopub=iopub, stdin=stdin, hb=hb, control=control)
         await self.wait_for_ready()
         self._pending = {}
+        _ready = asyncio.Event()
         async def _reader():
+            _ready.set()
             while True:
                 try: reply = await self.get_shell_msg(timeout=None)
                 except Exception as e:
@@ -47,6 +49,7 @@ class ConKernelClient(AsyncKernelClient):
                 q = self._pending.get(reply["parent_header"].get("msg_id"))
                 if q: await q.put(reply)
         self._shell_reader_task = asyncio.create_task(_reader())
+        await _ready.wait()
         return self
 
     def stop_channels(self):
