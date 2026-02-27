@@ -15,7 +15,7 @@ from zmq.error import ZMQError
 from jupyter_client.kernelspec import KernelSpec
 from jupyter_client import AsyncKernelManager
 from traitlets import Type
-import asyncio, zmq.asyncio
+import asyncio, zmq.asyncio, time
 
 # %% ../nbs/00_core.ipynb #374b75d0
 if not hasattr(Session, '_orig_send'): Session._orig_send = Session.send
@@ -27,7 +27,9 @@ def _send(self, stream, msg_or_type, content=None, parent=None, ident=None,
     # Force a sync, ensuring the send is fully registered internally
     # Avoids a race where the lock releases, another thread immediately calls send(),
     # and now 2 threads are interacting with the internal state before I/O thread has caught up
-    if stream and hasattr(stream, 'io_thread'): stream.io_thread.socket.get(zmq.EVENTS)
+    if stream:
+        if hasattr(stream, 'io_thread'): stream.io_thread.socket.get(zmq.EVENTS)
+        elif hasattr(stream, 'getsockopt'): stream.getsockopt(zmq.EVENTS)
     return msg
 
 Session.send = _send
@@ -45,11 +47,14 @@ class ConKernelClient(AsyncKernelClient):
                 try: reply = await self.get_shell_msg(timeout=None)
                 except Exception as e:
                     for q in self._pending.values(): await q.put(e)
+                    if self._pending: logging.warning(f"_reader died with pending - {self._pending}: {e}")
+                    else: logging.warning(f"_reader died with no pending: {e}")
                     break
                 q = self._pending.get(reply["parent_header"].get("msg_id"))
                 if q: await q.put(reply)
         self._shell_reader_task = asyncio.create_task(_reader())
         await _ready.wait()
+        await asyncio.sleep(0.2)
         return self
 
     def stop_channels(self):
@@ -57,6 +62,7 @@ class ConKernelClient(AsyncKernelClient):
         if (tk := getattr(self, '_shell_reader_task', None)):
             tk.cancel()
             self._shell_reader_task = None
+        time.sleep(0.2)
 
     async def _async_recv_reply(self, msg_id, timeout=None, channel="shell"):
         if channel == "control": return await self._async_get_control_msg(timeout=timeout)
