@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.6
+
+### New Features
+
+- Add `stdin_send` ([#4](https://github.com/AnswerDotAI/conkernelclient/issues/4))
+
+
 ## 0.0.5
 
 ### Bugs Squashed
