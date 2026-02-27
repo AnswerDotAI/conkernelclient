@@ -37,6 +37,7 @@ Session.send = _send
 # %% ../nbs/00_core.ipynb #d6a5fa6a
 class ConKernelClient(AsyncKernelClient):
     async def start_channels(self, shell:bool=True, iopub:bool=True, stdin:bool=True, hb:bool=True, control:bool=True):
+        "Start channels, wait for ready, and launch background shell-reply reader"
         super().start_channels(shell=shell, iopub=iopub, stdin=stdin, hb=hb, control=control)
         await self.wait_for_ready()
         self._pending = {}
@@ -58,6 +59,7 @@ class ConKernelClient(AsyncKernelClient):
         return self
 
     def stop_channels(self):
+        "Stop channels and cancel the background shell-reply reader task"
         super().stop_channels()
         if (tk := getattr(self, '_shell_reader_task', None)):
             tk.cancel()
@@ -76,6 +78,7 @@ class ConKernelClient(AsyncKernelClient):
 
     def execute(self, code, user_expressions=None, allow_stdin=None, reply=False, subsh_id=None,
                 cts_typ='code', timeout=60, msg_id=None, **kw):
+        "Send an execute request, returning a coroutine for the reply if `reply`, else the msg_id"
         if user_expressions is None: user_expressions = {}
         if allow_stdin is None: allow_stdin = self.allow_stdin
         content = dict(user_expressions=user_expressions, allow_stdin=allow_stdin, subsh_id=subsh_id, **kw)
@@ -88,6 +91,11 @@ class ConKernelClient(AsyncKernelClient):
         self.shell_channel.send(msg)
         if not reply: return msg_id
         return self._async_recv_reply(msg_id, timeout=timeout)
+
+    async def stdin_send(self, msg:dict):
+        "Send on `stdin_channel` then ping event loop"
+        kc.stdin_channel.send(msg)
+        await asyncio.sleep(0)
 
 # %% ../nbs/00_core.ipynb #b828c222
 class ConKernelManager(AsyncKernelManager): client_class,client_factory = ConKernelClient,Type(ConKernelClient)
