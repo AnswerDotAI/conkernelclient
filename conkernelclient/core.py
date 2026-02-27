@@ -95,7 +95,7 @@ class ConKernelClient(AsyncKernelClient):
     async def stdin_send(self, msg:dict):
         "Send on `stdin_channel` then ping event loop"
         self.stdin_channel.send(msg)
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.01)
 
 # %% ../nbs/00_core.ipynb #b828c222
 class ConKernelManager(AsyncKernelManager): client_class,client_factory = ConKernelClient,Type(ConKernelClient)
