@@ -1,0 +1,72 @@
+[
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "ConKernelClient source",
+    "section": "",
+    "text": "from fastcore.test import test_eq\nfrom fastcore.utils import patch",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#imports",
+    "href": "core.html#imports",
+    "title": "ConKernelClient source",
+    "section": "",
+    "text": "from fastcore.test import test_eq\nfrom fastcore.utils import patch",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#setup",
+    "href": "core.html#setup",
+    "title": "ConKernelClient source",
+    "section": "Setup",
+    "text": "Setup\n\nsource\n\nConKernelClient\n\ndef ConKernelClient(\n    kwargs:t.Any\n)-&gt;None:\n\nA KernelClient with async APIs\nget_[channel]_msg() methods wait for and return messages on channels, raising :exc:queue.Empty if no message arrives within timeout seconds.\n\nsource\n\n\nConKernelManager\n\ndef ConKernelManager(\n    args:Any, kwargs:Any\n)-&gt;None:\n\nAn async kernel manager.\n\nkm = ConKernelManager(session=Session(key=b'x'))\nawait km.start_kernel()\nawait km.is_alive()\n\nTrue\n\n\n\nkc = await km.client().start_channels()\nawait kc.is_alive()\n\nTrue\n\n\n\nmid = kc.execute('1+1', reply=False)\nmid\n\n'95164565-1b052c74632b03fbe217b8de_3713_1'\n\n\n\n@patch\nasync def get_pubs(self:KernelClient, timeout=0.2):\n    \"Retrieve all outstanding iopub messages\"\n    res = []\n    try:\n        while msg := await self.get_iopub_msg(timeout=timeout): res.append(msg)\n    except Empty: pass\n    return res\n\n\npubs = await kc.get_pubs()\n[(o['msg_type'],o['content']) for o in pubs]\n\n[('status', {'execution_state': 'busy'}),\n ('execute_input', {'code': '1+1', 'execution_count': 1}),\n ('execute_result',\n  {'data': {'text/plain': '2'}, 'metadata': {}, 'execution_count': 1}),\n ('status', {'execution_state': 'idle'})]\n\n\n\npubs[0]['parent_header']\n\n{'msg_id': '95164565-1b052c74632b03fbe217b8de_3713_1',\n 'msg_type': 'execute_request',\n 'username': 'jhoward',\n 'session': '95164565-1b052c74632b03fbe217b8de',\n 'date': datetime.datetime(2026, 2, 27, 3, 16, 39, 228656, tzinfo=tzutc()),\n 'version': '5.4'}\n\n\n\nkc.stop_channels()\n\n\nkc = await km.client().start_channels()\n\n\nr = await kc.execute('2+1', timeout=1, reply=True)\nr\n\n{'header': {'msg_id': 'd40943ee-1c9991f3726c7b2c58e4e42c_3719_21',\n  'msg_type': 'execute_reply',\n  'username': 'jhoward',\n  'session': 'd40943ee-1c9991f3726c7b2c58e4e42c',\n  'date': datetime.datetime(2026, 2, 27, 3, 16, 40, 156085, tzinfo=tzutc()),\n  'version': '5.4'},\n 'msg_id': 'd40943ee-1c9991f3726c7b2c58e4e42c_3719_21',\n 'msg_type': 'execute_reply',\n 'parent_header': {'msg_id': '95164565-1b052c74632b03fbe217b8de_3713_1',\n  'msg_type': 'execute_request',\n  'username': 'jhoward',\n  'session': '95164565-1b052c74632b03fbe217b8de',\n  'date': datetime.datetime(2026, 2, 27, 3, 16, 40, 151952, tzinfo=tzutc()),\n  'version': '5.4'},\n 'metadata': {'started': '2026-02-27T03:16:40.153095Z',\n  'dependencies_met': True,\n  'engine': '45b26be5-508d-4fa0-8397-a8e45704f6da',\n  'status': 'ok'},\n 'content': {'status': 'ok',\n  'execution_count': 2,\n  'user_expressions': {},\n  'payload': []},\n 'buffers': []}\n\n\n\nawait kc.get_pubs()\nkc.execute('print(\"orphan\")')\nawait asyncio.sleep(0.3)\nslow, fast = await asyncio.gather(\n    kc.execute('import time; time.sleep(0.3)', timeout=5, reply=True),\n    kc.execute('1+1', timeout=5, reply=True),\n    return_exceptions=True)\ntest_eq(type(slow), dict)\ntest_eq(type(fast), dict)\n\n\na = kc.execute('x=2', reply=True)\nb = kc.execute('y=3', reply=True)\n\n\nr = await asyncio.wait_for(asyncio.gather(a,b), timeout=2)\ntest_eq(len(r), 2)\nr[0]['parent_header']['msg_id']\n\n'95164565-1b052c74632b03fbe217b8de_3713_5'\n\n\n\nif await km.is_alive():\n    kc.stop_channels()\n    await km.shutdown_kernel()",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "conkernelclient",
+    "section": "",
+    "text": "Jupyter’s KernelClient is designed around a simple request-reply pattern: you send one message on the shell channel, wait for its reply, then send the next. This works fine for a single-threaded notebook, but falls apart when you need concurrent execution. For instance, running multiple cells in parallel, or letting an LLM tool loop fire off code while a long-running computation is still in flight. The underlying ZMQ socket isn’t safe to share across tasks, and there’s no built-in mechanism to route replies back to the correct caller when multiple requests are outstanding.\nconkernelclient solves this with ConKernelClient, a drop-in replacement for AsyncKernelClient that makes concurrent execute() calls safe. It patches Session.send to synchronise with the ZMQ I/O thread (preventing a race where two sends interleave), and spins up a dedicated reader task on the shell channel that demultiplexes incoming replies by message ID. Each execute(..., reply=True) call gets its own asyncio.Queue, so multiple coroutines can await their replies independently without interfering with each other.",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "index.html#background",
+    "href": "index.html#background",
+    "title": "conkernelclient",
+    "section": "",
+    "text": "Jupyter’s KernelClient is designed around a simple request-reply pattern: you send one message on the shell channel, wait for its reply, then send the next. This works fine for a single-threaded notebook, but falls apart when you need concurrent execution. For instance, running multiple cells in parallel, or letting an LLM tool loop fire off code while a long-running computation is still in flight. The underlying ZMQ socket isn’t safe to share across tasks, and there’s no built-in mechanism to route replies back to the correct caller when multiple requests are outstanding.\nconkernelclient solves this with ConKernelClient, a drop-in replacement for AsyncKernelClient that makes concurrent execute() calls safe. It patches Session.send to synchronise with the ZMQ I/O thread (preventing a race where two sends interleave), and spins up a dedicated reader task on the shell channel that demultiplexes incoming replies by message ID. Each execute(..., reply=True) call gets its own asyncio.Queue, so multiple coroutines can await their replies independently without interfering with each other.",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "conkernelclient",
+    "section": "Installation",
+    "text": "Installation\nInstall from pypi\n$ pip install conkernelclient",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "conkernelclient",
+    "section": "How to use",
+    "text": "How to use\n\nfrom conkernelclient import *\n\nThe main entry point is ConKernelManager, a drop-in replacement for AsyncKernelManager that creates ConKernelClient instances. Start a kernel and connect a client in the usual way:\n\nimport asyncio\nfrom jupyter_client.session import Session\n\n\nkm = ConKernelManager(session=Session(key=b'x'))\nawait km.start_kernel()\nkc = await km.client().start_channels()\nawait kc.is_alive()\n\nTrue\n\n\nOnce connected, execute() works like the standard client. Pass reply=True to await the shell reply, or reply=False (the default) to fire-and-forget and collect results later via get_pubs:\n\nr = await kc.execute('2+1', timeout=1, reply=True)\nr['content']['status']\n\n'ok'\n\n\nThe key feature is safe concurrent execution. Multiple execute(..., reply=True) calls can be outstanding simultaneously — each gets its own asyncio.Queue, and a background reader task routes replies by message ID:\n\nfrom fastcore.test import test_eq\n\n\na = kc.execute('x=2', reply=True)\nb = kc.execute('y=3', reply=True)\nr = await asyncio.wait_for(asyncio.gather(a, b), timeout=2)\ntest_eq(len(r), 2)\nr[0]['parent_header']['msg_id']\n\n'dab23f68-96c28dd9c776844176afdff1_66028_2'\n\n\nBoth replies arrive independently, each routed to the correct caller. Without ConKernelClient, the second execute would either block waiting for the first to finish, or the replies would get crossed.\nAs usual, we clean up when we’re done:\n\nif await km.is_alive():\n    kc.stop_channels()\n    await km.shutdown_kernel()",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  }
+]
