@@ -96,9 +96,6 @@ class ConKernelClient(AsyncKernelClient):
             res = await asyncio.wait_for(q.get(), timeout)
             if isinstance(res, Exception): raise res
             return res
-        except (asyncio.TimeoutError, asyncio.CancelledError) as e:
-            _log.warning(f"Timeout for {msg_id}, pending={list(self._pending)}")
-            raise TimeoutError("Timeout waiting for reply") from e
         finally: self._pending.pop(msg_id, None)
 
     def execute(self, code, user_expressions=None, allow_stdin=None, reply=False, subsh_id=None,
