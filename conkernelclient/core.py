@@ -15,7 +15,10 @@ from zmq.error import ZMQError
 from jupyter_client.kernelspec import KernelSpec
 from jupyter_client import AsyncKernelManager
 from traitlets import Type
-import asyncio, zmq.asyncio, time
+import asyncio, zmq.asyncio, time, logging
+
+# %% ../nbs/00_core.ipynb #737a0fc1
+_log = logging.getLogger(__name__)
 
 # %% ../nbs/00_core.ipynb #374b75d0
 if not hasattr(Session, '_orig_send'): Session._orig_send = Session.send
@@ -36,6 +39,17 @@ Session.send = _send
 
 # %% ../nbs/00_core.ipynb #d6a5fa6a
 class ConKernelClient(AsyncKernelClient):
+    def _fail_pending(self, exc:Exception, skip=None):
+        for k,(q,_) in list(getattr(self, '_pending', {}).items()):
+            if k != skip:
+                try: q.put_nowait(exc)
+                except asyncio.QueueFull: pass
+
+    def _check_alive(self):
+        if not self.channels_running: raise RuntimeError("Channels not running")
+        tk = getattr(self, '_shell_reader_task', None)
+        return tk is not None and not tk.done()
+
     async def start_channels(self, shell:bool=True, iopub:bool=True, stdin:bool=True, hb:bool=True, control:bool=True):
         "Start channels, wait for ready, and launch background shell-reply reader"
         super().start_channels(shell=shell, iopub=iopub, stdin=stdin, hb=hb, control=control)
@@ -47,12 +61,20 @@ class ConKernelClient(AsyncKernelClient):
             while True:
                 try: reply = await self.get_shell_msg(timeout=None)
                 except Exception as e:
-                    for q in self._pending.values(): await q.put(e)
-                    if self._pending: logging.warning(f"_reader died with pending - {self._pending}: {e}")
-                    else: logging.warning(f"_reader died with no pending: {e}")
+                    self._fail_pending(e)
+                    _log.warning(f"_reader died, pending={list(self._pending)}: {e}")
                     break
-                q = self._pending.get(reply["parent_header"].get("msg_id"))
-                if q: await q.put(reply)
+                mid = reply["parent_header"].get("msg_id")
+                pend = self._pending.get(mid)
+                if pend:
+                    q, soe = pend
+                    try: q.put_nowait(reply)
+                    except asyncio.QueueFull: pass
+                else: _log.warning(f"Orphan reply for {reply['parent_header'].get('msg_id')}, pending={list(self._pending)}")
+                cts = reply.get("content", {})
+                if cts.get("status") in ("error", "aborted") and pend and soe:
+                    exc = RuntimeError(f"Kernel error aborted: {cts.get('ename')}: {cts.get('evalue')}")
+                    self._fail_pending(exc, skip=mid)
         self._shell_reader_task = asyncio.create_task(_reader())
         await _ready.wait()
         await asyncio.sleep(0.2)
@@ -60,6 +82,7 @@ class ConKernelClient(AsyncKernelClient):
 
     def stop_channels(self):
         "Stop channels and cancel the background shell-reply reader task"
+        self._fail_pending(RuntimeError("Shell channels stopped before reply"))
         super().stop_channels()
         if (tk := getattr(self, '_shell_reader_task', None)):
             tk.cancel()
@@ -68,26 +91,29 @@ class ConKernelClient(AsyncKernelClient):
 
     async def _async_recv_reply(self, msg_id, timeout=None, channel="shell"):
         if channel == "control": return await self._async_get_control_msg(timeout=timeout)
-        q = self._pending[msg_id]
+        q, _ = self._pending[msg_id]
         try:
             res = await asyncio.wait_for(q.get(), timeout)
             if isinstance(res, Exception): raise res
             return res
-        except asyncio.TimeoutError as e: raise TimeoutError("Timeout waiting for reply") from e
+        except (asyncio.TimeoutError, asyncio.CancelledError) as e:
+            _log.warning(f"Timeout for {msg_id}, pending={list(self._pending)}")
+            raise TimeoutError("Timeout waiting for reply") from e
         finally: self._pending.pop(msg_id, None)
 
     def execute(self, code, user_expressions=None, allow_stdin=None, reply=False, subsh_id=None,
-                cts_typ='code', timeout=60, msg_id=None, **kw):
+                cts_typ='code', timeout=60, msg_id=None, stop_on_error=True, **kw):
         "Send an execute request, returning a coroutine for the reply if `reply`, else the msg_id"
+        if not self._check_alive(): return asyncio.sleep(0) if reply else None
         if user_expressions is None: user_expressions = {}
         if allow_stdin is None: allow_stdin = self.allow_stdin
-        content = dict(user_expressions=user_expressions, allow_stdin=allow_stdin, subsh_id=subsh_id, **kw)
+        content = dict(user_expressions=user_expressions, allow_stdin=allow_stdin, subsh_id=subsh_id, stop_on_error=stop_on_error, **kw)
         content[cts_typ] = code
         msg = self.session.msg("execute_request", content)
         if msg_id is not None: msg["header"]["msg_id"] = msg_id
         if subsh_id is not None: msg["header"]["subshell_id"] = subsh_id
         msg_id = msg["header"]["msg_id"]
-        if reply: self._pending[msg_id] = asyncio.Queue(maxsize=1)
+        if reply: self._pending[msg_id] = (asyncio.Queue(maxsize=1), stop_on_error)
         self.shell_channel.send(msg)
         if not reply: return msg_id
         return self._async_recv_reply(msg_id, timeout=timeout)
