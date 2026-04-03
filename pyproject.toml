@@ -39,3 +39,4 @@ version = {attr = "conkernelclient.__version__"}
 include = ["conkernelclient"]
 
 [tool.nbdev]
+allowed_cell_metadata_keys = ["solveit_ai"]
