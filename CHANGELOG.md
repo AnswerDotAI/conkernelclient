@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.9
+
+### New Features
+
+- Fix concurrent execute races: fail-fast on channel stop/kernel death, abort pending on kernel error, add `stop_on_error` support ([#5](https://github.com/AnswerDotAI/conkernelclient/issues/5))
+
+
 ## 0.0.7
 
 ### New Features
