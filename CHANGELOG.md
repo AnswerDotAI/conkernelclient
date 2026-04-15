@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.10
+
+### New Features
+
+- Add DeadKernelError for ZMQ socket failures with targeted exception handling ([#6](https://github.com/AnswerDotAI/conkernelclient/issues/6))
+
+
 ## 0.0.9
 
 ### New Features
