@@ -21,4 +21,5 @@ d = { 'settings': { 'branch': 'main',
                                       'conkernelclient.core.ConKernelClient.stop_channels': ( 'core.html#conkernelclient.stop_channels',
                                                                                               'conkernelclient/core.py'),
                                       'conkernelclient.core.ConKernelManager': ('core.html#conkernelmanager', 'conkernelclient/core.py'),
+                                      'conkernelclient.core.DeadKernelError': ('core.html#deadkernelerror', 'conkernelclient/core.py'),
                                       'conkernelclient.core._send': ('core.html#_send', 'conkernelclient/core.py')}}}
