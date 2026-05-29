@@ -76,7 +76,6 @@ class ConKernelClient(AsyncKernelClient):
                     q, soe = pend
                     try: q.put_nowait(reply)
                     except asyncio.QueueFull: pass
-                else: _log.warning(f"Orphan reply for {reply['parent_header'].get('msg_id')}, pending={list(self._pending)}")
                 cts = reply.get("content", {})
                 if cts.get("status") in ("error", "aborted") and pend and soe:
                     exc = RuntimeError(f"Kernel error aborted: {cts.get('ename')}: {cts.get('evalue')}")
