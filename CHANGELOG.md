@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.11
+
+### New Features
+
+- Remove 'Orphan reply' warning ([#7](https://github.com/AnswerDotAI/conkernelclient/issues/7))
+
+
 ## 0.0.10
 
 ### New Features
