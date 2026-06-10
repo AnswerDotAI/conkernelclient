@@ -32,12 +32,16 @@ def _send(self, stream, msg_or_type, content=None, parent=None, ident=None,
         buffers=None, track=False, header=None, metadata=None):
     msg = self._orig_send(stream, msg_or_type, content=content, parent=parent,
                          ident=ident, buffers=buffers, track=track, header=header, metadata=metadata)
-    # Force a sync, ensuring the send is fully registered internally
-    # Avoids a race where the lock releases, another thread immediately calls send(),
-    # and now 2 threads are interacting with the internal state before I/O thread has caught up
+    # Session.send sends via a SYNC shadow of the asyncio socket (zmq.Socket.shadow), which runs
+    # libzmq process_commands() and consumes the FD edge a buffered reply may have signalled —
+    # a recv parked in poll(None) on that edge would then sleep forever. Reading EVENTS through
+    # the async override (_AsyncSocket.get) makes pyzmq re-schedule _handle_events for pending
+    # recv/poll futures, compensating the consumed edge. It MUST be .get(): pyzmq aliases
+    # `getsockopt = SocketBase.get` at class level, so .getsockopt() bypasses the override
+    # and consumes the edge without rescheduling.
     if stream:
         if hasattr(stream, 'io_thread'): stream.io_thread.socket.get(zmq.EVENTS)
-        elif hasattr(stream, 'getsockopt'): stream.getsockopt(zmq.EVENTS)
+        elif hasattr(stream, 'get'): stream.get(zmq.EVENTS)
     return msg
 
 Session.send = _send
