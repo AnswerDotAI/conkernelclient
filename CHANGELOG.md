@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.12
+
+- Fix timeout/race zmq bug
+
+
 ## 0.0.11
 
 ### New Features
