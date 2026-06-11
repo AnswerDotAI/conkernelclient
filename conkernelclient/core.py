@@ -41,6 +41,7 @@ def _send(self, stream, msg_or_type, content=None, parent=None, ident=None,
     # and consumes the edge without rescheduling.
     if stream:
         if hasattr(stream, 'io_thread'): stream.io_thread.socket.get(zmq.EVENTS)
+        # See tests/zmq_regression.py for a regression test which fails is 'get' is switched to 'getsockopt'
         elif hasattr(stream, 'get'): stream.get(zmq.EVENTS)
     return msg
 
