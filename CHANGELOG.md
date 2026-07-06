@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.13
+
+### New Features
+
+- Add ops module with iopub collection, execute composites, generic requests, DAP proxy, and lifecycle helpers; make Session.send patch lazy via `apply_session_patch` ([#9](https://github.com/AnswerDotAI/conkernelclient/issues/9))
+
+
 ## 0.0.12
 
 - Fix timeout/race zmq bug
