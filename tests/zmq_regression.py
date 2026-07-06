@@ -1,6 +1,8 @@
 import asyncio, time, sys
+from queue import Empty
 from jupyter_client import AsyncKernelManager
 import conkernelclient.core
+conkernelclient.core.apply_session_patch()
 
 async def main():
     km = AsyncKernelManager()
@@ -8,6 +10,12 @@ async def main():
     kc = km.client()
     kc.start_channels()
     await kc.wait_for_ready()
+
+    # Drain replies to any extra kernel_info requests wait_for_ready sent during a slow start,
+    # so the parked recv below can only receive the execute reply.
+    try:
+        while True: await kc.get_shell_msg(timeout=0.3)
+    except Empty: pass
 
     # 1. Park the recv first, so it's actually waiting in poll(None)
     fut = asyncio.create_task(kc.get_shell_msg(timeout=None))

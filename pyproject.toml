@@ -16,12 +16,12 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [
-  'jupyter_client'
+  'jupyter_client',
+  'fastcore',
 ]
 
 [project.optional-dependencies]
 dev = [
-  "fastcore",
   "ipykernel",
 ]
 
