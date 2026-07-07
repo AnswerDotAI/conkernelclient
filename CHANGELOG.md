@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.14
+
+### New Features
+
+- Add metadata param to `shell_request` for message-level metadata passthrough ([#10](https://github.com/AnswerDotAI/conkernelclient/issues/10))
+
+
 ## 0.0.13
 
 ### New Features
