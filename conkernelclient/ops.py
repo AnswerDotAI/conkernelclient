@@ -123,11 +123,12 @@ def shell_request(
     self:ConKernelClient, msg_type, timeout=default_timeout, reply=True, buffers=None,
     msg_id=None, # Override the auto-generated message id
     subshell_id=None, # Route via this subshell (header field)
+    metadata=None, # Message metadata (e.g. ipywidgets control-comm version check)
     **content
 ):
     "Send an arbitrary shell request, routed through the reply reader like `execute`. Returns a coroutine for the reply, or just the msg_id when `reply=False` (for fire-and-forget types like `comm_open` that never get replies)"
     if not self._check_alive(): return asyncio.sleep(0) if reply else None
-    msg = self.session.msg(msg_type, content)
+    msg = self.session.msg(msg_type, content, metadata=metadata)
     if msg_id is not None: msg['header']['msg_id'] = msg_id
     if subshell_id is not None: msg['header']['subshell_id'] = subshell_id
     mid = msg['header']['msg_id']
