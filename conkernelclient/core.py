@@ -11,7 +11,7 @@ __all__ = ['DeadKernelError', 'apply_session_patch', 'ConKernelClient', 'ConKern
 from jupyter_client import AsyncKernelClient, AsyncKernelManager
 from jupyter_client.session import Session
 from zmq.error import ZMQError
-from traitlets import Type
+from traitlets import Type, default
 import asyncio, zmq.asyncio, time, logging
 
 # %% ../nbs/00_core.ipynb #737a0fc1
@@ -48,6 +48,9 @@ def apply_session_patch():
 class ConKernelClient(AsyncKernelClient):
     def __init__(self, *args, **kwargs):
         apply_session_patch()
+        # jupyter_client's `get_connection_info` returns curve keys as str, but the client traits are `Bytes`
+        for k in ('curve_publickey','curve_secretkey'):
+            if isinstance(kwargs.get(k), str): kwargs[k] = kwargs[k].encode()
         super().__init__(*args, **kwargs)
 
     def _fail_pending(self, exc:Exception, skip=None):
@@ -134,4 +137,7 @@ class ConKernelClient(AsyncKernelClient):
         await asyncio.sleep(0.01)
 
 # %% ../nbs/00_core.ipynb #b828c222
-class ConKernelManager(AsyncKernelManager): client_class,client_factory = ConKernelClient,Type(ConKernelClient)
+class ConKernelManager(AsyncKernelManager):
+    client_class,client_factory = ConKernelClient,Type(ConKernelClient)
+    @default('transport_encryption')
+    def _transport_encryption_default(self): return 'auto'
