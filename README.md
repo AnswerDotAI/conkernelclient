@@ -5,27 +5,9 @@
 
 ## Background
 
-Jupyter’s `KernelClient` is designed around a simple request-reply
-pattern: you send one message on the shell channel, wait for its reply,
-then send the next. This works fine for a single-threaded notebook, but
-falls apart when you need concurrent execution. For instance, running
-multiple cells in parallel, or letting an LLM tool loop fire off code
-while a long-running computation is still in flight. The underlying ZMQ
-socket isn’t safe to share across tasks, and there’s no built-in
-mechanism to route replies back to the correct caller when multiple
-requests are outstanding.
+Jupyter’s `KernelClient` is designed around a simple request-reply pattern: you send one message on the shell channel, wait for its reply, then send the next. This works fine for a single-threaded notebook, but falls apart when you need concurrent execution. For instance, running multiple cells in parallel, or letting an LLM tool loop fire off code while a long-running computation is still in flight. The underlying ZMQ socket isn’t safe to share across tasks, and there’s no built-in mechanism to route replies back to the correct caller when multiple requests are outstanding.
 
-*conkernelclient* solves this with
-[`ConKernelClient`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient),
-a drop-in replacement for `AsyncKernelClient` that makes concurrent
-`execute()` calls safe. It patches `Session.send` to synchronise with
-the ZMQ I/O thread (preventing a race where two sends interleave), and
-spins up a dedicated reader task on the shell channel that demultiplexes
-incoming replies by message ID. Each `execute(..., reply=True)` call
-gets its own
-[`asyncio.Queue`](https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue),
-so multiple coroutines can `await` their replies independently without
-interfering with each other.
+*conkernelclient* solves this with [`ConKernelClient`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient), a drop-in replacement for `AsyncKernelClient` that makes concurrent `execute()` calls safe. It patches `Session.send` to synchronise with the ZMQ I/O thread (preventing a race where two sends interleave), and spins up a dedicated reader task on the shell channel that demultiplexes incoming replies by message ID. Each `execute(..., reply=True)` call gets its own [`asyncio.Queue`](https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue), so multiple coroutines can `await` their replies independently without interfering with each other.
 
 ## Installation
 
@@ -41,11 +23,7 @@ $ pip install conkernelclient
 from conkernelclient import *
 ```
 
-The main entry point is
-[`ConKernelManager`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelmanager),
-a drop-in replacement for `AsyncKernelManager` that creates
-[`ConKernelClient`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient)
-instances. Start a kernel and connect a client in the usual way:
+The main entry point is [`ConKernelManager`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelmanager), a drop-in replacement for `AsyncKernelManager` that creates [`ConKernelClient`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient) instances. Start a kernel and connect a client in the usual way:
 
 ``` python
 import asyncio
@@ -61,9 +39,7 @@ await kc.is_alive()
 
     True
 
-Once connected, `execute()` works like the standard client. Pass
-`reply=True` to await the shell reply, or `reply=False` (the default) to
-fire-and-forget and collect results later via `get_pubs`:
+Once connected, `execute()` works like the standard client. Pass `reply=True` to await the shell reply, or `reply=False` (the default) to fire-and-forget and collect results later via `get_pubs`:
 
 ``` python
 r = await kc.execute('2+1', timeout=1, reply=True)
@@ -72,11 +48,7 @@ r['content']['status']
 
     'ok'
 
-The key feature is safe concurrent execution. Multiple
-`execute(..., reply=True)` calls can be outstanding simultaneously —
-each gets its own
-[`asyncio.Queue`](https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue),
-and a background reader task routes replies by message ID:
+The key feature is safe concurrent execution. Multiple `execute(..., reply=True)` calls can be outstanding simultaneously — each gets its own [`asyncio.Queue`](https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue), and a background reader task routes replies by message ID:
 
 ``` python
 from fastcore.test import test_eq
@@ -90,13 +62,9 @@ test_eq(len(r), 2)
 r[0]['parent_header']['msg_id']
 ```
 
-    'dab23f68-96c28dd9c776844176afdff1_66028_2'
+    '8c84fe1c-20242a1940eecfc5a1a31500_61486_3'
 
-Both replies arrive independently, each routed to the correct caller.
-Without
-[`ConKernelClient`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient),
-the second `execute` would either block waiting for the first to finish,
-or the replies would get crossed.
+Both replies arrive independently, each routed to the correct caller. Without [`ConKernelClient`](https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient), the second `execute` would either block waiting for the first to finish, or the replies would get crossed.
 
 As usual, we clean up when we’re done:
 
@@ -105,4 +73,3 @@ if await km.is_alive():
     kc.stop_channels()
     await km.shutdown_kernel()
 ```
-
