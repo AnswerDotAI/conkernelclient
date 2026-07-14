@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.15
+
+### New Features
+
+- Add CurveZMQ transport encryption support: encode curve keys as bytes and default `transport_encryption` to 'auto' ([#11](https://github.com/AnswerDotAI/conkernelclient/issues/11))
+
+
 ## 0.0.14
 
 ### New Features
