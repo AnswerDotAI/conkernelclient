@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Standard async operations on a running kernel, for ConKernelClient">
+
+<title>ops – conkernelclient</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-b38bfc58f0732c5acf3d85c920ebea91.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="ops – conkernelclient">
+<meta property="og:description" content="Standard async operations on a running kernel, for ConKernelClient">
+<meta property="og:site_name" content="conkernelclient">
+<meta name="twitter:title" content="ops – conkernelclient">
+<meta name="twitter:description" content="Standard async operations on a running kernel, for ConKernelClient">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">conkernelclient</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ops.html">ops</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">conkernelclient</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ConKernelClient source</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ops.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">ops</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#imports" id="toc-imports" class="nav-link active" data-scroll-target="#imports">Imports</a></li>
+  <li><a href="#message-basics" id="toc-message-basics" class="nav-link" data-scroll-target="#message-basics">Message basics</a></li>
+  <li><a href="#iopub-collection" id="toc-iopub-collection" class="nav-link" data-scroll-target="#iopub-collection">Iopub collection</a></li>
+  <li><a href="#outputs" id="toc-outputs" class="nav-link" data-scroll-target="#outputs">Outputs</a></li>
+  <li><a href="#execute-composites" id="toc-execute-composites" class="nav-link" data-scroll-target="#execute-composites">Execute composites</a></li>
+  <li><a href="#expression-values" id="toc-expression-values" class="nav-link" data-scroll-target="#expression-values">Expression values</a></li>
+  <li><a href="#generic-requests" id="toc-generic-requests" class="nav-link" data-scroll-target="#generic-requests">Generic requests</a></li>
+  <li><a href="#proxies" id="toc-proxies" class="nav-link" data-scroll-target="#proxies">Proxies</a></li>
+  <li><a href="#interrupt" id="toc-interrupt" class="nav-link" data-scroll-target="#interrupt">Interrupt</a></li>
+  <li><a href="#lifecycle" id="toc-lifecycle" class="nav-link" data-scroll-target="#lifecycle">Lifecycle</a></li>
+  <li><a href="#cleanup" id="toc-cleanup" class="nav-link" data-scroll-target="#cleanup">Cleanup</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/conkernelclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="ops.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">ops</h1>
+</div>
+
+<div>
+  <div class="description">
+    Standard async operations on a running kernel, for <code>ConKernelClient</code>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<section id="imports" class="level2">
+<h2 class="anchored" data-anchor-id="imports">Imports</h2>
+<div id="23936f1c" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.utils <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> conkernelclient.core <span class="im">import</span> ConKernelClient, ConKernelManager</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> contextlib <span class="im">import</span> asynccontextmanager</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> ast <span class="im">import</span> literal_eval</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> queue <span class="im">import</span> Empty</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> asyncio, time</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="45931f4e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> test_eq, test_fail</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> jupyter_client.session <span class="im">import</span> Session</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="a7c0dc67" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>km <span class="op">=</span> ConKernelManager(session<span class="op">=</span>Session(key<span class="op">=</span><span class="st">b'x'</span>))</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> km.start_kernel()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>kc <span class="op">=</span> <span class="cf">await</span> km.client().start_channels()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.is_alive()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>True</code></pre>
+</div>
+</div>
+</section>
+<section id="message-basics" class="level2">
+<h2 class="anchored" data-anchor-id="message-basics">Message basics</h2>
+<div id="d62f6b51" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>default_timeout <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parent_id(msg):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"The `msg_id` of the request this `msg` responds to, or None"</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> nested_idx(msg, <span class="st">"parent_header"</span>, <span class="st">"msg_id"</span>) <span class="kw">or</span> <span class="va">None</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> iter_timeout(timeout<span class="op">=</span><span class="va">None</span>, default<span class="op">=</span>default_timeout):</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Yield remaining seconds until `timeout` expires, using monotonic time"</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    end <span class="op">=</span> time.monotonic() <span class="op">+</span> (timeout <span class="kw">or</span> default)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> (rem <span class="op">:=</span> end <span class="op">-</span> time.monotonic()) <span class="op">&gt;</span> <span class="dv">0</span>: <span class="cf">yield</span> rem</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Every reply carries its request’s <code>msg_id</code> in the parent header; all routing below keys on it. <a href="https://AnswerDotAI.github.io/conkernelclient/ops.html#iter_timeout"><code>iter_timeout</code></a> drives every wait loop in this module: it yields the time still available, so a loop body can pass a shrinking timeout to each blocking call.</p>
+<div id="a6d121d9" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.execute(<span class="st">'1+1'</span>, reply<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>test_eq(parent_id(r), r[<span class="st">'parent_header'</span>][<span class="st">'msg_id'</span>])</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> parent_id({}) <span class="kw">is</span> <span class="va">None</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="iopub-collection" class="level2">
+<h2 class="anchored" data-anchor-id="iopub-collection">Iopub collection</h2>
+<div id="ad596b2b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> iopub_drain(<span class="va">self</span>:ConKernelClient, msg_id, timeout<span class="op">=</span>default_timeout):</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Collect iopub messages parented to `msg_id` until its idle status arrives. Other requests' messages are discarded: one drain at a time"</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    res <span class="op">=</span> []</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> rem <span class="kw">in</span> iter_timeout(timeout):</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span>: msg <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.get_iopub_msg(timeout<span class="op">=</span>rem)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">except</span> Empty: <span class="cf">continue</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> parent_id(msg) <span class="op">!=</span> msg_id: <span class="cf">continue</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        res.append(msg)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> msg.get(<span class="st">'msg_type'</span>) <span class="op">==</span> <span class="st">'status'</span> <span class="kw">and</span> nested_idx(msg, <span class="st">'content'</span>, <span class="st">'execution_state'</span>) <span class="op">==</span> <span class="st">'idle'</span>: <span class="cf">return</span> res</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">TimeoutError</span>(<span class="ss">f"iopub idle not seen for </span><span class="sc">{</span>msg_id<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="e705c283" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> iopub_flush(<span class="va">self</span>:ConKernelClient, timeout<span class="op">=</span><span class="fl">0.1</span>):</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Discard all pending iopub messages, e.g. leftovers from fire-and-forget executes"</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> <span class="va">True</span>: <span class="cf">await</span> <span class="va">self</span>.get_iopub_msg(timeout<span class="op">=</span>timeout)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> Empty: <span class="cf">pass</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>iopub_flush</code> is the counterpart for when you <em>don’t</em> want collection: clear the backlog before starting a push-based consumer or a fresh interaction.</p>
+<div id="b51f3467" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>kc.execute(<span class="st">'print("junk")'</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.iopub_flush()</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> kc.get_iopub_msg(timeout<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="va">False</span>, <span class="st">'iopub should be empty after flush'</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> Empty: <span class="cf">pass</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Collecting a request’s output means draining iopub until the kernel publishes the <code>idle</code> status for that request - that is the protocol’s “this request is done publishing” signal, far more reliable than sweeping whatever is pending after a fixed delay.</p>
+<div id="630b6a46" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>mid <span class="op">=</span> kc.execute(<span class="st">'print("hi"); 42'</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>msgs <span class="op">=</span> <span class="cf">await</span> kc.iopub_drain(mid)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>test_eq([m[<span class="st">'msg_type'</span>] <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>]<span class="op">!=</span><span class="st">'status'</span>], [<span class="st">'execute_input'</span>, <span class="st">'stream'</span>, <span class="st">'execute_result'</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="outputs" class="level2">
+<h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
+<div id="add288fe" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>output_types <span class="op">=</span> {<span class="st">'stream'</span>, <span class="st">'execute_result'</span>, <span class="st">'display_data'</span>, <span class="st">'error'</span>}</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> nb_outputs(msgs):</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Convert iopub `msgs` to nbformat-style output dicts, dropping non-output messages"</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    res <span class="op">=</span> []</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> m <span class="kw">in</span> msgs:</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (mt <span class="op">:=</span> m[<span class="st">'msg_type'</span>]) <span class="kw">not</span> <span class="kw">in</span> output_types: <span class="cf">continue</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        d <span class="op">=</span> <span class="bu">dict</span>(output_type<span class="op">=</span>mt, <span class="op">**</span>m[<span class="st">'content'</span>])</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        d.pop(<span class="st">'transient'</span>, <span class="va">None</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        res.append(d)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="ebdbd6eb" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> iopub_msgs(msgs, msg_type<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Filter iopub `msgs` by `msg_type` - a single type, or a collection of types (all messages if None)"</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> msg_type <span class="kw">is</span> <span class="va">None</span>: <span class="cf">return</span> msgs</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    types <span class="op">=</span> {msg_type} <span class="cf">if</span> <span class="bu">isinstance</span>(msg_type, <span class="bu">str</span>) <span class="cf">else</span> msg_type</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [m <span class="cf">for</span> m <span class="kw">in</span> msgs <span class="cf">if</span> m[<span class="st">'msg_type'</span>] <span class="kw">in</span> types]</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> iopub_streams(msgs, name<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">"The stream messages in `msgs`, optionally only stream `name` ('stdout'/'stderr')"</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    streams <span class="op">=</span> iopub_msgs(msgs, <span class="st">'stream'</span>)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> streams <span class="cf">if</span> name <span class="kw">is</span> <span class="va">None</span> <span class="cf">else</span> [m <span class="cf">for</span> m <span class="kw">in</span> streams <span class="cf">if</span> m[<span class="st">'content'</span>].get(<span class="st">'name'</span>) <span class="op">==</span> name]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="f7fb5967" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>test_eq([m[<span class="st">'msg_type'</span>] <span class="cf">for</span> m <span class="kw">in</span> iopub_msgs(msgs, <span class="st">'execute_result'</span>)], [<span class="st">'execute_result'</span>])</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>test_eq([m[<span class="st">'msg_type'</span>] <span class="cf">for</span> m <span class="kw">in</span> iopub_msgs(msgs, output_types)], [<span class="st">'stream'</span>, <span class="st">'execute_result'</span>])</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>test_eq(iopub_streams(msgs)[<span class="dv">0</span>][<span class="st">'content'</span>][<span class="st">'text'</span>], <span class="st">'hi</span><span class="ch">\n</span><span class="st">'</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>test_eq(iopub_streams(msgs, <span class="st">'stderr'</span>), [])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Raw-message filters for when the protocol wrapping <em>is</em> wanted (parent ids, per-message metadata) - <a href="https://AnswerDotAI.github.io/conkernelclient/ops.html#nb_outputs"><code>nb_outputs</code></a> above is the lossy convenience, these are the lossless ones.</p>
+<p>Iopub messages carry protocol wrapping (headers, status chatter, <code>execute_input</code> echoes) that consumers rarely want. <a href="https://AnswerDotAI.github.io/conkernelclient/ops.html#nb_outputs"><code>nb_outputs</code></a> reduces them to the same output dicts a notebook file stores, so downstream code (e.g.&nbsp;renderers expecting nbformat shapes) can consume them directly. This mirrors <code>nbformat.v4.output_from_msg</code> without the dependency, minus schema validation.</p>
+<div id="d5e59f7f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>outs <span class="op">=</span> nb_outputs(msgs)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>test_eq(outs[<span class="dv">0</span>], <span class="bu">dict</span>(output_type<span class="op">=</span><span class="st">'stream'</span>, name<span class="op">=</span><span class="st">'stdout'</span>, text<span class="op">=</span><span class="st">'hi</span><span class="ch">\n</span><span class="st">'</span>))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>test_eq(outs[<span class="dv">1</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">'42'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="execute-composites" class="level2">
+<h2 class="anchored" data-anchor-id="execute-composites">Execute composites</h2>
+<div id="52e7c8f1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> exec_drain(<span class="va">self</span>:ConKernelClient, code, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>kw):</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Execute `code`; return `(reply, outputs)` where outputs are the request's iopub messages"</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    reply <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.execute(code, reply<span class="op">=</span><span class="va">True</span>, timeout<span class="op">=</span>timeout, <span class="op">**</span>kw)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> reply, <span class="cf">await</span> <span class="va">self</span>.iopub_drain(parent_id(reply), timeout<span class="op">=</span>timeout)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> exec_ok(<span class="va">self</span>:ConKernelClient, code, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>kw):</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"`exec_drain`, asserting the reply status is ok"</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    reply, outputs <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.exec_drain(code, timeout<span class="op">=</span>timeout, <span class="op">**</span>kw)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> reply[<span class="st">'content'</span>][<span class="st">'status'</span>] <span class="op">==</span> <span class="st">'ok'</span>, reply[<span class="st">'content'</span>]</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> reply, outputs</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> exec_outs(<span class="va">self</span>:ConKernelClient, code, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>kw):</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Execute `code` and return just its nbformat-style outputs"</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    reply, outputs <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.exec_drain(code, timeout<span class="op">=</span>timeout, <span class="op">**</span>kw)</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> nb_outputs(outputs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The composites cover the three common shapes: full protocol detail (<code>exec_drain</code>), tests that just need success (<code>exec_ok</code>), and consumers that only want outputs (<code>exec_outs</code>).</p>
+<div id="39cb5448" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>reply, outputs <span class="op">=</span> <span class="cf">await</span> kc.exec_ok(<span class="st">'x = 3; x'</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>test_eq(reply[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.exec_outs(<span class="st">'print(x*2)'</span>)), [<span class="bu">dict</span>(output_type<span class="op">=</span><span class="st">'stream'</span>, name<span class="op">=</span><span class="st">'stdout'</span>, text<span class="op">=</span><span class="st">'6</span><span class="ch">\n</span><span class="st">'</span>)])</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>reply, _ <span class="op">=</span> <span class="cf">await</span> kc.exec_drain(<span class="st">'1/0'</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>test_eq(reply[<span class="st">'content'</span>][<span class="st">'ename'</span>], <span class="st">'ZeroDivisionError'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="expression-values" class="level2">
+<h2 class="anchored" data-anchor-id="expression-values">Expression values</h2>
+<div id="77ab9da4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EvalError(<span class="pp">Exception</span>):</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"An `eval_expr` expression raised in the kernel"</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_expr(s):</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">"The `literal_eval` of `s` when its form allows, else `s` unchanged"</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>: <span class="cf">return</span> literal_eval(s)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">Exception</span>: <span class="cf">return</span> s</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> user_exprs(<span class="va">self</span>:ConKernelClient, exprs:<span class="bu">dict</span>, code:<span class="bu">str</span><span class="op">=</span><span class="st">''</span>, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>kw):</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Run `code` and evaluate each of the `exprs` expressions in the same round trip; returns the reply content (statuses and mimebundles unparsed)"</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (<span class="cf">await</span> <span class="va">self</span>.execute(code, reply<span class="op">=</span><span class="va">True</span>, timeout<span class="op">=</span>timeout, user_expressions<span class="op">=</span>exprs, store_history<span class="op">=</span><span class="va">False</span>, <span class="op">**</span>kw))[<span class="st">'content'</span>]</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> eval_expr(<span class="va">self</span>:ConKernelClient, expr:<span class="bu">str</span>, code:<span class="bu">str</span><span class="op">=</span><span class="st">''</span>, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>kw):</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Evaluate `expr` in the kernel (optionally after running `code`) and return its value: parsed via `literal_eval` when its repr allows, else the repr string. Raises `EvalError` if the kernel raises"</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    cts <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.user_exprs({<span class="st">'_'</span>: expr}, code, timeout<span class="op">=</span>timeout, <span class="op">**</span>kw)</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cts[<span class="st">'status'</span>] <span class="op">!=</span> <span class="st">'ok'</span>: <span class="cf">raise</span> EvalError(<span class="ss">f"</span><span class="sc">{</span>cts<span class="sc">.</span>get(<span class="st">'ename'</span>)<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>cts<span class="sc">.</span>get(<span class="st">'evalue'</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    r <span class="op">=</span> cts[<span class="st">'user_expressions'</span>][<span class="st">'_'</span>]</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> r.get(<span class="st">'status'</span>) <span class="op">!=</span> <span class="st">'ok'</span>: <span class="cf">raise</span> EvalError(<span class="ss">f"</span><span class="sc">{</span>r<span class="sc">.</span>get(<span class="st">'ename'</span>)<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>r<span class="sc">.</span>get(<span class="st">'evalue'</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> parse_expr(r[<span class="st">'data'</span>][<span class="st">'text/plain'</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The <code>user_expressions</code> round trip: one execute carries the expression, the kernel evaluates it <em>after</em> the (empty) cell and returns its repr inside the execute_reply - no iopub involved, so it works cleanly alongside streaming output. Values whose repr is not <code>literal_eval</code>-able come back as that repr string. This is the general core of solveit’s richer <code>eval</code> RPC.</p>
+<div id="928c0a65" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.exec_ok(<span class="st">"v = [1, 'a', {'b': 2}]"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.eval_expr(<span class="st">'v'</span>), [<span class="dv">1</span>, <span class="st">'a'</span>, {<span class="st">'b'</span>: <span class="dv">2</span>}])</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.eval_expr(<span class="st">'w * 2'</span>, code<span class="op">=</span><span class="st">'w = 21'</span>), <span class="dv">42</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>cts <span class="op">=</span> <span class="cf">await</span> kc.user_exprs({<span class="st">'a'</span>: <span class="st">'v[0]'</span>, <span class="st">'b'</span>: <span class="st">'len(v)'</span>})</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>test_eq(cts[<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>test_eq(parse_expr(cts[<span class="st">'user_expressions'</span>][<span class="st">'a'</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>]), <span class="dv">1</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>test_eq(parse_expr(cts[<span class="st">'user_expressions'</span>][<span class="st">'b'</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>]), <span class="dv">3</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="cf">await</span> kc.eval_expr(<span class="st">'sum(v[2].values())'</span>), <span class="dv">2</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.eval_expr(<span class="st">'print'</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(r, <span class="bu">str</span>) <span class="kw">and</span> <span class="st">'print'</span> <span class="kw">in</span> r, r</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> kc.eval_expr(<span class="st">'nope_undefined'</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> <span class="va">False</span>, <span class="st">'expected EvalError'</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> EvalError <span class="im">as</span> e: <span class="cf">assert</span> <span class="st">'NameError'</span> <span class="kw">in</span> <span class="bu">str</span>(e)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="generic-requests" class="level2">
+<h2 class="anchored" data-anchor-id="generic-requests">Generic requests</h2>
+<div id="aafc1ab4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> shell_request(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>:ConKernelClient, msg_type, timeout<span class="op">=</span>default_timeout, reply<span class="op">=</span><span class="va">True</span>, buffers<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    msg_id<span class="op">=</span><span class="va">None</span>, <span class="co"># Override the auto-generated message id</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    subshell_id<span class="op">=</span><span class="va">None</span>, <span class="co"># Route via this subshell (header field)</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    metadata<span class="op">=</span><span class="va">None</span>, <span class="co"># Message metadata (e.g. ipywidgets control-comm version check)</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>content</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Send an arbitrary shell request, routed through the reply reader like `execute`. Returns a coroutine for the reply, or just the msg_id when `reply=False` (for fire-and-forget types like `comm_open` that never get replies)"</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="va">self</span>._check_alive(): <span class="cf">return</span> asyncio.sleep(<span class="dv">0</span>) <span class="cf">if</span> reply <span class="cf">else</span> <span class="va">None</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    msg <span class="op">=</span> <span class="va">self</span>.session.msg(msg_type, content, metadata<span class="op">=</span>metadata)</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> msg_id <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>: msg[<span class="st">'header'</span>][<span class="st">'msg_id'</span>] <span class="op">=</span> msg_id</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> subshell_id <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>: msg[<span class="st">'header'</span>][<span class="st">'subshell_id'</span>] <span class="op">=</span> subshell_id</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    mid <span class="op">=</span> msg[<span class="st">'header'</span>][<span class="st">'msg_id'</span>]</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> reply: <span class="va">self</span>._pending[mid] <span class="op">=</span> (asyncio.Queue(maxsize<span class="op">=</span><span class="dv">1</span>), <span class="va">False</span>)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> buffers: <span class="va">self</span>.session.send(<span class="va">self</span>.shell_channel.socket, msg, buffers<span class="op">=</span>buffers)</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: <span class="va">self</span>.shell_channel.send(msg)</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>._async_recv_reply(mid, timeout<span class="op">=</span>timeout) <span class="cf">if</span> reply <span class="cf">else</span> mid</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> control_request(<span class="va">self</span>:ConKernelClient, msg_type, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>content):</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Send a request on the control channel and await its matching reply"</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>    msg <span class="op">=</span> <span class="va">self</span>.session.msg(msg_type, content)</span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.control_channel.send(msg)</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> rem <span class="kw">in</span> iter_timeout(timeout):</span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span>: reply <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.get_control_msg(timeout<span class="op">=</span>rem)</span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">except</span> Empty: <span class="cf">continue</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> parent_id(reply) <span class="op">==</span> msg[<span class="st">'header'</span>][<span class="st">'msg_id'</span>]: <span class="cf">return</span> reply</span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">TimeoutError</span>(<span class="ss">f"no reply to </span><span class="sc">{</span>msg_type<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://AnswerDotAI.github.io/conkernelclient/core.html#conkernelclient"><code>ConKernelClient</code></a>’s background reader consumes <em>every</em> shell message, so a bare <code>get_shell_msg</code> would race it and lose. Any non-execute shell request (<code>kernel_info_request</code>, <code>complete_request</code>, …) must therefore register with the same routing table <code>execute</code> uses - that is what <code>shell_request</code> does. Pass <code>reply=False</code> for fire-and-forget message types the kernel never answers (<code>comm_open</code>, <code>comm_msg</code>, <code>comm_close</code>), and <code>buffers</code> for binary payloads. Control-channel replies have no reader competing for them, so <code>control_request</code> matches by parent id directly. Note control requests should not be issued concurrently with each other.</p>
+<div id="87631aef" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.shell_request(<span class="st">'kernel_info_request'</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>test_eq(r[<span class="st">'header'</span>][<span class="st">'msg_type'</span>], <span class="st">'kernel_info_reply'</span>)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.control_request(<span class="st">'kernel_info_request'</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>test_eq(r[<span class="st">'header'</span>][<span class="st">'msg_type'</span>], <span class="st">'kernel_info_reply'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Read the <code>input_request</code> from the stdin channel with <code>get_stdin_msg</code>, then answer it; the blocked execute’s reply follows.</p>
+<div id="4f01d2b6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> input_reply(<span class="va">self</span>:ConKernelClient, value:<span class="bu">str</span>):</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Answer the kernel's pending input_request (from `input()` in an execute sent with `allow_stdin=True`)"</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> <span class="va">self</span>.stdin_send(<span class="va">self</span>.session.msg(<span class="st">'input_reply'</span>, <span class="bu">dict</span>(value<span class="op">=</span>value)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="c6007534" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> kc.execute(<span class="st">"x = input('name? ')"</span>, reply<span class="op">=</span><span class="va">True</span>, timeout<span class="op">=</span><span class="dv">10</span>, allow_stdin<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>msg <span class="op">=</span> <span class="cf">await</span> kc.get_stdin_msg(timeout<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>test_eq(msg[<span class="st">'header'</span>][<span class="st">'msg_type'</span>], <span class="st">'input_request'</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.input_reply(<span class="st">'Ada'</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> c)[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'ok'</span>)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.exec_outs(<span class="st">'x'</span>))[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">"'Ada'"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="52afbf30" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>code <span class="op">=</span> <span class="st">"""def _t(comm, msg):</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="st">    global nbuf; nbuf = len(msg.get('buffers', []))</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="st">get_ipython().kernel.comm_manager.register_target('t', _t)</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.exec_ok(code)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>mid <span class="op">=</span> kc.shell_request(<span class="st">'comm_open'</span>, reply<span class="op">=</span><span class="va">False</span>, comm_id<span class="op">=</span><span class="st">'c1'</span>, target_name<span class="op">=</span><span class="st">'t'</span>, data<span class="op">=</span>{}, buffers<span class="op">=</span>[<span class="st">b'12345'</span>])</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(mid, <span class="bu">str</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.exec_ok(<span class="st">'import time; time.sleep(0.2)'</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.exec_outs(<span class="st">'nbuf'</span>))[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">'1'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="c164a136" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>code <span class="op">=</span> <span class="st">"""def _tm(comm, msg):</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="st">    global nmd; nmd = msg.get('metadata')</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="st">get_ipython().kernel.comm_manager.register_target('tm', _tm)</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.exec_ok(code)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>kc.shell_request(<span class="st">'comm_open'</span>, reply<span class="op">=</span><span class="va">False</span>, comm_id<span class="op">=</span><span class="st">'cm1'</span>, target_name<span class="op">=</span><span class="st">'tm'</span>, data<span class="op">=</span>{}, metadata<span class="op">=</span>{<span class="st">'version'</span>:<span class="st">'2.1.0'</span>})</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> kc.exec_ok(<span class="st">'import time; time.sleep(0.2)'</span>)</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.exec_outs(<span class="st">'nmd'</span>))[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">"{'version': '2.1.0'}"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="proxies" class="level2">
+<h2 class="anchored" data-anchor-id="proxies">Proxies</h2>
+<div id="97d75b1e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> _ReqProxy:</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Attribute access to protocol requests: `kc.cmd.complete(code=...)` sends `complete_request` on shell"</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, kc, send, suffix<span class="op">=</span><span class="st">'_request'</span>): <span class="va">self</span>.kc,<span class="va">self</span>.send,<span class="va">self</span>.suffix <span class="op">=</span> kc,send,suffix</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattr__</span>(<span class="va">self</span>, name):</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> name.startswith(<span class="st">'_'</span>): <span class="cf">raise</span> <span class="pp">AttributeError</span>(name)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">def</span> _call(<span class="op">*</span>, timeout<span class="op">=</span>default_timeout, <span class="op">**</span>content): <span class="cf">return</span> <span class="va">self</span>.send(<span class="ss">f"</span><span class="sc">{</span>name<span class="sc">}{</span><span class="va">self</span><span class="sc">.</span>suffix<span class="sc">}</span><span class="ss">"</span>, timeout<span class="op">=</span>timeout, <span class="op">**</span>content)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> _call</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(as_prop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cmd(<span class="va">self</span>:ConKernelClient):</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Shell requests as methods: `await kc.cmd.history(...)` sends `history_request`"</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _ReqProxy(<span class="va">self</span>, <span class="va">self</span>.shell_request)</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(as_prop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ctl(<span class="va">self</span>:ConKernelClient):</span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Control requests as methods: `await kc.ctl.shutdown(restart=True)` sends `shutdown_request`"</span></span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _ReqProxy(<span class="va">self</span>, <span class="va">self</span>.control_request)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="af8183ea" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> _DapProxy:</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"DAP requests as methods: `kc.dap.stackTrace(threadId=1)` sends a `debug_request` on control"</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, kc): <span class="va">self</span>.kc,<span class="va">self</span>.seq <span class="op">=</span> kc,<span class="dv">0</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__getattr__</span>(<span class="va">self</span>, command):</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> command.startswith(<span class="st">'_'</span>): <span class="cf">raise</span> <span class="pp">AttributeError</span>(command)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> command.endswith(<span class="st">'_'</span>) <span class="kw">and</span> <span class="kw">not</span> command.endswith(<span class="st">'__'</span>): command <span class="op">=</span> command[:<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="kw">def</span> _call(<span class="op">*</span>, timeout<span class="op">=</span>default_timeout, full<span class="op">=</span><span class="va">False</span>, <span class="op">**</span>arguments):</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.seq <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>            r <span class="op">=</span> <span class="cf">await</span> <span class="va">self</span>.kc.control_request(<span class="st">'debug_request'</span>, timeout<span class="op">=</span>timeout,</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>                <span class="bu">type</span><span class="op">=</span><span class="st">'request'</span>, seq<span class="op">=</span><span class="va">self</span>.seq, command<span class="op">=</span>command, arguments<span class="op">=</span>arguments)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> r <span class="cf">if</span> full <span class="cf">else</span> r[<span class="st">'content'</span>]</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> _call</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span>(as_prop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dap(<span class="va">self</span>:ConKernelClient):</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">"DAP debug requests as methods. Stateful (`seq` counter), so cached per client, unlike `cmd`/`ctl`"</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">getattr</span>(<span class="va">self</span>, <span class="st">'_dap'</span>, <span class="va">None</span>) <span class="kw">is</span> <span class="va">None</span>: <span class="va">self</span>._dap <span class="op">=</span> _DapProxy(<span class="va">self</span>)</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>._dap</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>dap</code> speaks the Debug Adapter Protocol over <code>debug_request</code> control messages. A trailing underscore escapes Python keywords (<code>kc.dap.continue_(...)</code> sends the DAP <code>continue</code> command); <code>full=True</code> returns the whole reply message instead of just its content.</p>
+<p>The proxies make one-off protocol requests read like methods without hand-assembling messages. They are stateless, so no caching is needed.</p>
+<div id="c71e53a1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.cmd.complete(code<span class="op">=</span><span class="st">'pri'</span>, cursor_pos<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'print'</span> <span class="kw">in</span> r[<span class="st">'content'</span>][<span class="st">'matches'</span>]</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.cmd.is_complete(code<span class="op">=</span><span class="st">'def f():'</span>)</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>test_eq(r[<span class="st">'content'</span>][<span class="st">'status'</span>], <span class="st">'incomplete'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="b1a4a7a1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.shell_request(<span class="st">'kernel_info_request'</span>, msg_id<span class="op">=</span><span class="st">'fixed-id-1'</span>)</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>test_eq(parent_id(r), <span class="st">'fixed-id-1'</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.dap.debugInfo()</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>test_eq(r[<span class="st">'command'</span>], <span class="st">'debugInfo'</span>)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> r[<span class="st">'success'</span>]</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>r2 <span class="op">=</span> <span class="cf">await</span> kc.dap.debugInfo(full<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>test_eq(parent_id(r2), parent_id(r2))  <span class="co"># full message shape</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> r2[<span class="st">'header'</span>][<span class="st">'msg_type'</span>] <span class="op">==</span> <span class="st">'debug_reply'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="interrupt" class="level2">
+<h2 class="anchored" data-anchor-id="interrupt">Interrupt</h2>
+<div id="8b1967f4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="at">@patch</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> interrupt(<span class="va">self</span>:ConKernelClient, timeout<span class="op">=</span><span class="dv">5</span>):</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Interrupt the running request via `interrupt_request` on control; returns the reply"</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="cf">await</span> <span class="va">self</span>.control_request(<span class="st">'interrupt_request'</span>, timeout<span class="op">=</span>timeout)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The interrupted <code>execute</code> returns an error reply with <code>ename</code> <code>KeyboardInterrupt</code>, and the kernel stays usable. (Solveit’s gateway historically followed the interrupt with an empty <code>execute</code> to wake a parked recv; the <code>Session.send</code> patch in <code>core</code> addresses that wake-up at the transport level, so it is not repeated here.)</p>
+<div id="ad4750d6" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>task <span class="op">=</span> asyncio.ensure_future(kc.execute(<span class="st">'import time; time.sleep(30)'</span>, reply<span class="op">=</span><span class="va">True</span>, timeout<span class="op">=</span><span class="dv">15</span>))</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> asyncio.sleep(<span class="fl">0.5</span>)</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>r <span class="op">=</span> <span class="cf">await</span> kc.interrupt()</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>test_eq(r[<span class="st">'header'</span>][<span class="st">'msg_type'</span>], <span class="st">'interrupt_reply'</span>)</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>reply <span class="op">=</span> <span class="cf">await</span> task</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>test_eq(reply[<span class="st">'content'</span>][<span class="st">'ename'</span>], <span class="st">'KeyboardInterrupt'</span>)</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>test_eq((<span class="cf">await</span> kc.exec_outs(<span class="st">'40+2'</span>))[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">'42'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="lifecycle" class="level2">
+<h2 class="anchored" data-anchor-id="lifecycle">Lifecycle</h2>
+<div id="edaf42c9" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="at">@asynccontextmanager</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> run_kernel(</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    kernel_name<span class="op">=</span><span class="st">'python3'</span>, <span class="co"># Kernelspec name to launch</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    manager_cls<span class="op">=</span>ConKernelManager, <span class="co"># Manager class, e.g. a subclass customizing launch</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>kwargs <span class="co"># Passed to `start_kernel` (e.g. `env`, `cwd`)</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Start a kernel, yield `(km, kc)` with channels running, and always shut both down"</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>    km <span class="op">=</span> manager_cls(kernel_name<span class="op">=</span>kernel_name)</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> km.start_kernel(<span class="op">**</span>kwargs)</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>    kc <span class="op">=</span> <span class="cf">await</span> km.client().start_channels()</span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>: <span class="cf">yield</span> km, kc</span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">finally</span>:</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>        kc.stop_channels()</span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> km.shutdown_kernel(now<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="839e20f6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;nbdev&quot;,&quot;value&quot;:{&quot;export&quot;:&quot;true&quot;}}">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> reconnect(km, kc<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Restart `km`'s kernel (fresh process, state discarded) and return a newly connected client, stopping `kc` if given"</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> kc <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>: kc.stop_channels()</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> km.restart_kernel(now<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="cf">await</span> km.client().start_channels()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="6ff30ec7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> run_kernel() <span class="im">as</span> (km3, kc3):</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> kc3.exec_ok(<span class="st">'x = 42'</span>)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    pid1 <span class="op">=</span> km3.provisioner.pid</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    kc3 <span class="op">=</span> <span class="cf">await</span> reconnect(km3, kc3)</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> km3.provisioner.pid <span class="op">!=</span> pid1</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    reply, _ <span class="op">=</span> <span class="cf">await</span> kc3.exec_drain(<span class="st">'x'</span>)</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>    test_eq(reply[<span class="st">'content'</span>][<span class="st">'ename'</span>], <span class="st">'NameError'</span>)</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>    test_eq((<span class="cf">await</span> kc3.exec_outs(<span class="st">'1+1'</span>))[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">'2'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>After a restart the old client’s channels and routed-reply reader are stale, so <a href="https://AnswerDotAI.github.io/conkernelclient/ops.html#reconnect"><code>reconnect</code></a> hands back a fresh client bound to the restarted process. State is gone: redo any imports/setup.</p>
+<p>The context manager guarantees teardown even when a test body raises, which is what keeps a big protocol test suite from leaking kernel processes.</p>
+<div id="6fca968f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="cf">with</span> run_kernel() <span class="im">as</span> (km2, kc2):</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    test_eq((<span class="cf">await</span> kc2.exec_outs(<span class="st">'1+1'</span>))[<span class="dv">0</span>][<span class="st">'data'</span>][<span class="st">'text/plain'</span>], <span class="st">'2'</span>)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    pid <span class="op">=</span> km2.provisioner.pid</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> <span class="cf">await</span> km2.is_alive()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="cleanup" class="level2">
+<h2 class="anchored" data-anchor-id="cleanup">Cleanup</h2>
+<div id="3ecb056c" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="cf">await</span> km.is_alive():</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>    kc.stop_channels()</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> km.shutdown_kernel()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/conkernelclient");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/conkernelclient/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
