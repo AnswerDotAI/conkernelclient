@@ -17,12 +17,13 @@ classifiers = [
 ]
 dependencies = [
   'jupyter_client',
-  'fastcore',
+  'fastcore>=2.1.17',
 ]
 
 [project.optional-dependencies]
 dev = [
   "ipykernel",
+  "ipymini>=0.1.17",
 ]
 
 [project.urls]

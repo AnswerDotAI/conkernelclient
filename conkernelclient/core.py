@@ -12,6 +12,8 @@ from jupyter_client import AsyncKernelClient, AsyncKernelManager
 from jupyter_client.session import Session
 from zmq.error import ZMQError
 from traitlets import Type, default
+from fastcore.utils import patch
+from queue import Empty
 import asyncio, zmq.asyncio, time, logging
 
 # %% ../nbs/00_core.ipynb #737a0fc1
@@ -91,7 +93,6 @@ class ConKernelClient(AsyncKernelClient):
                     self._fail_pending(exc, skip=mid)
         self._shell_reader_task = asyncio.create_task(_reader())
         await _ready.wait()
-        await asyncio.sleep(0.2)
         return self
 
     def stop_channels(self):
@@ -101,7 +102,6 @@ class ConKernelClient(AsyncKernelClient):
         if (tk := getattr(self, '_shell_reader_task', None)):
             tk.cancel()
             self._shell_reader_task = None
-        time.sleep(0.2)
 
     async def _async_recv_reply(self, msg_id, timeout=None, channel="shell"):
         if channel == "control": return await self._async_get_control_msg(timeout=timeout)
@@ -135,6 +135,52 @@ class ConKernelClient(AsyncKernelClient):
         try: self.stdin_channel.send(msg)
         except (AssertionError, OSError, ZMQError) as e: raise DeadKernelError(f"Kernel socket closed: {e}") from e
         await asyncio.sleep(0.01)
+
+# %% ../nbs/00_core.ipynb #3771c654
+@patch
+async def wait_for_ready(self:ConKernelClient, timeout=None):
+    "Wait for the kernel to be ready: deterministic via `iopub_welcome` (JEP 65) when the kernel sends one, else jupyter_client's probe loop"
+    deadline = time.monotonic()+timeout if timeout is not None else None
+    def _left():
+        if deadline is None: return 1.0
+        t = deadline-time.monotonic()
+        if t <= 0: raise RuntimeError(f"Kernel didn't respond in {timeout} seconds")
+        return min(t, 1.0)
+    async def _get(ch):
+        while True:
+            try: return await ch.get_msg(timeout=_left())
+            except Empty:
+                if not await self._async_is_alive(): raise RuntimeError("Kernel died before replying to kernel_info")
+    msg = None
+    while msg is None:
+        self.kernel_info()
+        try: msg = await self.iopub_channel.get_msg(timeout=_left())
+        except Empty:
+            if not await self._async_is_alive(): raise RuntimeError("Kernel died before replying to kernel_info")
+    if msg['msg_type']=='iopub_welcome':
+        mid = self.kernel_info()
+        while (reply := await _get(self.shell_channel))['parent_header'].get('msg_id') != mid: pass
+        self._handle_kernel_info_reply(reply)
+        while not (msg['msg_type']=='status' and msg['parent_header'].get('msg_id')==mid and msg['content']['execution_state']=='idle'):
+            msg = await _get(self.iopub_channel)
+    else:
+        while (reply := await _get(self.shell_channel))['msg_type'] != 'kernel_info_reply': pass
+        self._handle_kernel_info_reply(reply)
+        while True:
+            try: await self.iopub_channel.get_msg(timeout=0.2)
+            except Empty: break
+
+# %% ../nbs/00_core.ipynb #967c10a1
+@patch
+async def astop_channels(self:ConKernelClient):
+    "Stop channels and cancel the background shell-reply reader, awaiting its exit"
+    self._fail_pending(RuntimeError("Shell channels stopped before reply"))
+    if (tk := getattr(self, '_shell_reader_task', None)):
+        tk.cancel()
+        try: await tk
+        except asyncio.CancelledError: pass
+        self._shell_reader_task = None
+    super(ConKernelClient, self).stop_channels()
 
 # %% ../nbs/00_core.ipynb #b828c222
 class ConKernelManager(AsyncKernelManager):
