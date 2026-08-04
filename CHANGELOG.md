@@ -6,8 +6,8 @@
 
 ### New Features
 
-- Integrate jupywire EvalOps for kernel-side eval/call helpers, add reply() and _pre_ipy ([#13](https://github.com/AnswerDotAI/conkernelclient/issues/13))
-- Add deterministic wait_for_ready and async astop_channels ([#12](https://github.com/AnswerDotAI/conkernelclient/issues/12))
+- Integrate jupywire EvalOps for kernel-side eval/call helpers, add reply() and `_pre_ipy` ([#13](https://github.com/AnswerDotAI/conkernelclient/issues/13))
+- Add deterministic `wait_for_ready` and async `astop_channels` ([#12](https://github.com/AnswerDotAI/conkernelclient/issues/12))
 
 
 ## 0.0.16
