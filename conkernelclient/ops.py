@@ -10,8 +10,9 @@ __all__ = ['default_timeout', 'output_types', 'parent_id', 'iter_timeout', 'iopu
 
 # %% ../nbs/01_ops.ipynb #23936f1c
 from fastcore.utils import *
-from fastcore.nbio import msgs2outs
-from .core import ConKernelClient, ConKernelManager
+from fastcore.ansi import strip_ansi
+from fastcore.nbio import msgs2outs, preferred_out
+from .core import ConKernelClient, ConKernelManager, DeadKernelError
 from contextlib import asynccontextmanager
 from ast import literal_eval
 from queue import Empty
@@ -108,6 +109,26 @@ async def eval_expr(self:ConKernelClient, expr:str, code:str='', timeout=default
     r = cts['user_expressions']['_']
     if r.get('status') != 'ok': raise EvalError(f"{r.get('ename')}: {r.get('evalue')}")
     return parse_expr(r['data']['text/plain'])
+
+# %% ../nbs/01_ops.ipynb #d9bbaa8d
+@patch
+def reply(self:ConKernelClient,
+    code, # A string of code in the kernel's language.
+    user_expressions:NoneType=None, # A dict mapping names to expressions to be evaluated in the user's dict
+    allow_stdin:NoneType=None, # Flag for whether the kernel can send stdin requests to frontends.
+    cts_typ:str='code', timeout:int=None, msg_id:NoneType=None, priority:bool=False, **kw
+):
+    if priority: assert self.priority, 'no priority subshell configured'
+    return self.execute(code, user_expressions=user_expressions, allow_stdin=allow_stdin, reply=True,
+        cts_typ=cts_typ, timeout=timeout or getattr(self, 'default_timeout', default_timeout), msg_id=msg_id, subsh_id=self.priority if priority else None, **kw)
+
+# %% ../nbs/01_ops.ipynb #5de02acb
+from jupywire.ops import EvalOps, EvalException, try_eval
+
+@patch
+def _pre_ipy(self:ConKernelClient):
+    if not self.shell_channel.is_alive(): raise DeadKernelError()
+
 
 # %% ../nbs/01_ops.ipynb #aafc1ab4
 @patch

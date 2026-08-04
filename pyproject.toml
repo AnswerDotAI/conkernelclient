@@ -18,12 +18,16 @@ classifiers = [
 dependencies = [
   'jupyter_client',
   'fastcore>=2.1.17',
+  'jupywire>=0.0.1',
 ]
 
 [project.optional-dependencies]
 dev = [
   "ipykernel",
   "ipymini>=0.1.17",
+  "ipyfuncs>=0.0.1",
+  "pytest",
+  "pytest-timeout",
 ]
 
 [project.urls]
@@ -45,3 +49,6 @@ allowed_cell_metadata_keys = ['solveit_ai']
 
 [tool.chkstyle]
 skip_paths = ["_modidx.py"]
+
+[tool.pytest.ini_options]
+timeout = 120

@@ -13,6 +13,7 @@ from jupyter_client.session import Session
 from zmq.error import ZMQError
 from traitlets import Type, default
 from fastcore.utils import patch
+from jupywire.ops import EvalOps
 from queue import Empty
 import asyncio, zmq.asyncio, time, logging
 
@@ -47,7 +48,7 @@ def apply_session_patch():
     Session.send = _send
 
 # %% ../nbs/00_core.ipynb #d6a5fa6a
-class ConKernelClient(AsyncKernelClient):
+class ConKernelClient(EvalOps, AsyncKernelClient):
     def __init__(self, *args, **kwargs):
         apply_session_patch()
         # jupyter_client's `get_connection_info` returns curve keys as str, but the client traits are `Bytes`
