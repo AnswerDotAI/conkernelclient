@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.18
+
+### New Features
+
+- Remove priority param from reply() ([#15](https://github.com/AnswerDotAI/conkernelclient/issues/15))
+- use jupywire ([#14](https://github.com/AnswerDotAI/conkernelclient/issues/14))
+
+
 ## 0.0.17
 
 ### New Features
