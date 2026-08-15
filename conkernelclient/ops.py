@@ -104,11 +104,10 @@ def reply(self:ConKernelClient,
     code, # A string of code in the kernel's language.
     user_expressions:NoneType=None, # A dict mapping names to expressions to be evaluated in the user's dict
     allow_stdin:NoneType=None, # Flag for whether the kernel can send stdin requests to frontends.
-    cts_typ:str='code', timeout:int=None, msg_id:NoneType=None, priority:bool=False, **kw
+    cts_typ:str='code', timeout:int=None, msg_id:NoneType=None, **kw
 ):
-    if priority: assert self.priority, 'no priority subshell configured'
     return self.execute(code, user_expressions=user_expressions, allow_stdin=allow_stdin, reply=True,
-        cts_typ=cts_typ, timeout=timeout or getattr(self, 'default_timeout', default_timeout), msg_id=msg_id, subsh_id=self.priority if priority else None, **kw)
+        cts_typ=cts_typ, timeout=timeout or getattr(self, 'default_timeout', default_timeout), msg_id=msg_id, **kw)
 
 # %% ../nbs/01_ops.ipynb #5de02acb
 from jupywire.ops import EvalOps, EvalException, try_eval
