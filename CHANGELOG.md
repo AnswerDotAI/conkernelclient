@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.19
+
+### New Features
+
+- Allow ConKernelManager and `run_kernel` to accept an explicit kernel argv/KernelSpec, bypassing installed kernelspec discovery ([#16](https://github.com/AnswerDotAI/conkernelclient/issues/16))
+
+
 ## 0.0.18
 
 ### New Features
