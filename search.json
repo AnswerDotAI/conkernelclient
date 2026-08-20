@@ -1,0 +1,232 @@
+[
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "ConKernelClient source",
+    "section": "",
+    "text": "import os\nfrom jupyter_client import KernelClient\nfrom jupyter_client.kernelspec import KernelSpec\nfrom fastcore.test import test_eq\n\n\nsource\n\n\ndef DeadKernelError(\n    *args, **kwargs\n):\nCommon base class for all non-exit exceptions.",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#imports",
+    "href": "core.html#imports",
+    "title": "ConKernelClient source",
+    "section": "",
+    "text": "import os\nfrom jupyter_client import KernelClient\nfrom jupyter_client.kernelspec import KernelSpec\nfrom fastcore.test import test_eq\n\n\nsource\n\n\ndef DeadKernelError(\n    *args, **kwargs\n):\nCommon base class for all non-exit exceptions.",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#setup",
+    "href": "core.html#setup",
+    "title": "ConKernelClient source",
+    "section": "Setup",
+    "text": "Setup\n\nsource\n\napply_session_patch\ndef apply_session_patch():\nMake Session.send compensate the ZMQ FD edge a sync send consumes (see _send comment). Idempotent; applied automatically when a ConKernelClient is constructed, and available for use with vanilla clients.\nImporting this module must not change global state: the Session.send patch below is only applied when the first ConKernelClient is constructed (via apply_session_patch, which vanilla-client users such as tests/zmq_regression.py can also call directly). This keeps import conkernelclient side-effect free, so e.g. protocol test suites can exercise an unpatched client in the same process.\n\nassert not hasattr(Session, '_orig_send')\nassert Session.send is not _send\n\n\nsource\n\n\nConKernelClient\ndef ConKernelClient(\n    *args, **kwargs\n):\nKernel-client calling conventions over the inheritor’s reply and execute: see the module docstring.",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#readiness",
+    "href": "core.html#readiness",
+    "title": "ConKernelClient source",
+    "section": "Readiness",
+    "text": "Readiness\nstart_channels must not return until the kernel is genuinely ready: the shell socket answering requests, and our iopub subscription registered, since anything published before registration is silently dropped (zmq’s “slow joiner”). jupyter_client’s wait_for_ready proves the subscription indirectly: poke the kernel with kernel_info probes until some iopub traffic appears, then drain whatever the probes stirred up until 0.2s of silence. That works against any kernel, but costs settling waits on every connect, and “quiet for 0.2s” is a guess rather than a guarantee.\nKernels whose iopub socket is XPUB publish an iopub_welcome message the moment a subscription registers (JEP 65: ipykernel, ipymini). Nothing can be delivered to a subscriber before its subscription exists, so the welcome is guaranteed to be the first message a fresh client receives, and that makes readiness deterministic with no capability check needed. If the first iopub message is a welcome, nothing published afterwards can have been missed, so one final kernel_info acts as an end marker: once its reply arrives on shell every earlier probe reply has been consumed, and once its idle arrives on iopub every earlier probe’s status pulse has too, leaving both channels provably clean. If the first message is anything else, this kernel does not send welcomes, and that message is exactly the evidence jupyter_client’s loop waits for, so we continue with its classic semantics: take a kernel_info_reply, then drain iopub until silence.\n\nsource\n\nConKernelClient.wait_for_ready\nasync def wait_for_ready(\n    timeout:NoneType=None\n):\nWait for the kernel to be ready: deterministic via iopub_welcome (JEP 65) when the kernel sends one, else jupyter_client’s probe loop\nstop_channels is synchronous: it closes the sockets and cancels the reader without awaiting it, which is fine when the caller shares the client’s event loop. Callers driving the client from another thread (such as sync code using fastcore’s run_sync) need teardown to run on the loop: astop_channels cancels the reader, awaits its exit, then closes the channels.\n\nsource\n\n\nConKernelClient.astop_channels\nasync def astop_channels():\nStop channels and cancel the background shell-reply reader, awaiting its exit\n\nsource\n\n\nConKernelManager\ndef ConKernelManager(\n    *args, kernel_spec:NoneType=None, **kwargs\n):\nAn async kernel manager.\njupyter_client normally resolves its read-only kernel_spec property by name. ConKernelManager also accepts a KernelSpec directly, allowing embedders to provide an in-memory launch description without installing it in Jupyter’s registry.\nIt also defaults transport_encryption to 'auto': when the kernelspec declares supported_encryption: \"curve\" (as ipykernel≥7.3 does), the manager provisions CurveZMQ keys so kernel traffic is encrypted over TCP — which also silences ipykernel’s plain-TCP warning. For kernels without that metadata (e.g. ipymini) it’s a no-op.\n\nkm = ConKernelManager(session=Session(key=b'x'))\nawait km.start_kernel()\nassert km.curve_secretkey is not None\nawait km.is_alive()\n\nTrue\n\n\n\nkc = await km.client().start_channels()\nawait kc.is_alive()\n\nTrue\n\n\n\nassert Session.send is _send\nassert hasattr(Session, '_orig_send')\n\nreply=False (the default) sends the request and returns its msg_id without registering it in _pending, so the matching execute_reply finds no entry in the reader’s routing table and is discarded. That is what makes fire-and-forget safe on the shell channel: the reader consumes every message either way, so nothing accumulates there. Iopub output from the request does queue up, which is what get_pubs below collects (and iopub_flush discards).\n\nmid = kc.execute('1+1', reply=False)\nmid\n\n'1f83b809-b8efedc8ba1ecd01cfb4fb64_61485_2'\n\n\n\n@patch\nasync def get_pubs(self:KernelClient, timeout=0.2):\n    \"Retrieve all outstanding iopub messages\"\n    res = []\n    try:\n        while msg := await self.get_iopub_msg(timeout=timeout): res.append(msg)\n    except Empty: pass\n    return res\n\n\npubs = await kc.get_pubs()\n[(o['msg_type'],o['content']) for o in pubs]\n\n[('status', {'execution_state': 'busy'}),\n ('execute_input', {'code': '1+1', 'execution_count': 1}),\n ('execute_result',\n  {'data': {'text/plain': '2'},\n   'metadata': {'__type': 'int'},\n   'execution_count': 1}),\n ('status', {'execution_state': 'idle'})]\n\n\n\npubs[0]['parent_header']\n\n{'msg_id': '1f83b809-b8efedc8ba1ecd01cfb4fb64_61485_2',\n 'msg_type': 'execute_request',\n 'username': 'jhoward',\n 'session': '1f83b809-b8efedc8ba1ecd01cfb4fb64',\n 'date': datetime.datetime(2026, 7, 7, 9, 24, 21, 820745, tzinfo=tzutc()),\n 'version': '5.4'}\n\n\n\nawait kc.astop_channels()\n\n\nkc = await km.client().start_channels()\n\n\nr = await kc.execute('2+1', timeout=1, reply=True)\nr\n\n{'header': {'msg_id': '0cc85378-9d1d9ce3859d6c5b00f14953_61488_25',\n  'msg_type': 'execute_reply',\n  'username': 'jhoward',\n  'session': '0cc85378-9d1d9ce3859d6c5b00f14953',\n  'date': datetime.datetime(2026, 7, 7, 9, 24, 22, 654854, tzinfo=tzutc()),\n  'version': '5.4'},\n 'msg_id': '0cc85378-9d1d9ce3859d6c5b00f14953_61488_25',\n 'msg_type': 'execute_reply',\n 'parent_header': {'msg_id': '1f83b809-b8efedc8ba1ecd01cfb4fb64_61485_1',\n  'msg_type': 'execute_request',\n  'username': 'jhoward',\n  'session': '1f83b809-b8efedc8ba1ecd01cfb4fb64',\n  'date': datetime.datetime(2026, 7, 7, 9, 24, 22, 650658, tzinfo=tzutc()),\n  'version': '5.4'},\n 'metadata': {'started': '2026-07-07T09:24:22.652210Z',\n  'dependencies_met': True,\n  'engine': 'e4e54c96-a1fd-4457-ba83-60d06c626bda',\n  'status': 'ok'},\n 'content': {'status': 'ok',\n  'execution_count': 2,\n  'user_expressions': {},\n  'payload': []},\n 'buffers': []}\n\n\n\nawait kc.get_pubs()\nkc.execute('print(\"orphan\")')\nawait asyncio.sleep(0.3)\nslow, fast = await asyncio.gather(kc.execute('import time; time.sleep(0.3)', timeout=5, reply=True),\n    kc.execute('1+1', timeout=5, reply=True), return_exceptions=True)\ntest_eq(type(slow), dict)\ntest_eq(type(fast), dict)\n\n\na = kc.execute('x=2', reply=True)\nb = kc.execute('y=3', reply=True)\n\nr = await asyncio.wait_for(asyncio.gather(a,b), timeout=2)\ntest_eq(len(r), 2)\nr[0]['parent_header']['msg_id']\n\n'1f83b809-b8efedc8ba1ecd01cfb4fb64_61485_5'\n\n\nWith the default fail_pending=False, an error only affects what the kernel decides (here: stop_on_error=True on the wire makes it abort the queued cell, whose real aborted reply comes back). Pass fail_pending=None to follow stop_on_error (or True to force): when this request errors, every other pending reply fails fast with a RuntimeError naming the root cause - the pipelining behavior solveit’s gateway was built on.\n\na = kc.execute(\"import time; time.sleep(0.2); raise ValueError('boom')\", reply=True)\nb = kc.execute(\"print('queued')\", reply=True)\nra, rb = await asyncio.gather(a, b)\ntest_eq(ra['content']['status'], 'error')\ntest_eq(rb['content']['status'], 'aborted')\n\n\na = kc.execute(\"import time; time.sleep(0.2); raise ValueError('boom2')\", reply=True, fail_pending=None)\nb = kc.execute(\"print('queued2')\", reply=True)\ntry:\n    await asyncio.gather(a, b)\n    assert False, 'expected RuntimeError from fail_pending'\nexcept RuntimeError as e: assert 'boom2' in str(e)\n\n\nasync def g():\n    for i in range(10): await kc.execute(f'a{i}={i}; a{i}', reply=True)\n\nr = await asyncio.wait_for(asyncio.gather(g(),g(),g(),g()), timeout=10)\n\n\nif await km.is_alive():\n    kc.stop_channels()\n    await km.shutdown_kernel()",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#kernels-with-and-without-welcomes",
+    "href": "core.html#kernels-with-and-without-welcomes",
+    "title": "ConKernelClient source",
+    "section": "Kernels with and without welcomes",
+    "text": "Kernels with and without welcomes\nBoth readiness paths run against a real kernel. ipymini’s iopub socket is XPUB with XPUB_VERBOSE, so every subscriber gets its welcome, and its IPYMINI_IOPUB_XPUB=0 env flag reverts the socket to plain PUB, emulating a pre-JEP-65 kernel. The notebook supplies ipymini’s command through an in-memory KernelSpec, so running the source does not depend on ipymini also being installed in Jupyter’s kernelspec registry.\nConnecting to a running welcoming kernel (the first client below absorbs kernel boot; the timed one connects to a warm kernel) completes in a few round-trips, no probe retries or drain windows, and hands over a provably clean iopub stream:\n\ndef mini_manager(**kwargs):\n    spec = KernelSpec(argv=['ipymini', '-f', '{connection_file}'], display_name='ipymini')\n    return ConKernelManager(kernel_spec=spec, **kwargs)\nkm2 = mini_manager()\nawait km2.start_kernel()\nkc2 = await km2.client().start_channels()\nt0 = time.monotonic()\nkc3 = await km2.client().start_channels()\nelapsed = time.monotonic() - t0\ntest_eq(await kc3.get_pubs(), [])\nassert elapsed &lt; 0.35\nfor c in (kc2, kc3): c.stop_channels()\nawait km2.shutdown_kernel(now=True)\nelapsed\n\nThe same kernel started with welcomes disabled sends the client down the fallback probe loop: it still gets ready and executes fine, but pays the drain’s settling wait, visible in the elapsed time:\n\nkm2 = mini_manager()\nawait km2.start_kernel(env=dict(os.environ, IPYMINI_IOPUB_XPUB='0'))\nkc2 = await km2.client().start_channels()\nt0 = time.monotonic()\nkc3 = await km2.client().start_channels()\nelapsed = time.monotonic() - t0\nreply = await kc3.execute('1+1', reply=True, timeout=10)\ntest_eq(reply['content']['status'], 'ok')\nfor c in (kc2, kc3): c.stop_channels()\nawait km2.shutdown_kernel(now=True)\nelapsed",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "core.html#stdin",
+    "href": "core.html#stdin",
+    "title": "ConKernelClient source",
+    "section": "Stdin",
+    "text": "Stdin\ninput_request is the protocol’s one unsolicited routed send: the kernel learns a client’s identity from the shell request, then sends on its stdin ROUTER socket - a socket the client may not have finished connecting yet. Historically that send was silently discarded, so input() in the first instant after connect could lose its prompt. ipymini closes this at the source: its stdin router detects the unroutable send and retries until the client’s pipe is up, so the prompt below arrives even though the execute is fired immediately after start_channels returns. (Against kernels without that redelivery, such as ipykernel, this demo is timing-dependent - which is also its behavior with plain jupyter_client.)\n\nkm3 = mini_manager(session=Session(key=b'x'))\nawait km3.start_kernel()\nkc3 = await km3.client().start_channels()\nfut = asyncio.ensure_future(kc3.execute(\"name = input('name: ')\", reply=True, allow_stdin=True, timeout=10))\nreq = await kc3.get_stdin_msg(timeout=10)\nkc3.input('Jeremy')\nr = await fut\nawait kc3.astop_channels()\nawait km3.shutdown_kernel(now=True)\ntest_eq(req['content']['prompt'], 'name: ')\ntest_eq(r['content']['status'], 'ok')",
+    "crumbs": [
+      "ConKernelClient source"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "conkernelclient",
+    "section": "",
+    "text": "Jupyter’s KernelClient is designed around a simple request-reply pattern: you send one message on the shell channel, wait for its reply, then send the next. This works fine for a single-threaded notebook, but falls apart when you need concurrent execution. For instance, running multiple cells in parallel, or letting an LLM tool loop fire off code while a long-running computation is still in flight. The underlying ZMQ socket isn’t safe to share across tasks, and there’s no built-in mechanism to route replies back to the correct caller when multiple requests are outstanding.\nconkernelclient solves this with ConKernelClient, a drop-in replacement for AsyncKernelClient that makes concurrent execute() calls safe. It patches Session.send to synchronise with the ZMQ I/O thread (preventing a race where two sends interleave), and spins up a dedicated reader task on the shell channel that demultiplexes incoming replies by message ID. Each execute(..., reply=True) call gets its own asyncio.Queue, so multiple coroutines can await their replies independently without interfering with each other.",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "index.html#background",
+    "href": "index.html#background",
+    "title": "conkernelclient",
+    "section": "",
+    "text": "Jupyter’s KernelClient is designed around a simple request-reply pattern: you send one message on the shell channel, wait for its reply, then send the next. This works fine for a single-threaded notebook, but falls apart when you need concurrent execution. For instance, running multiple cells in parallel, or letting an LLM tool loop fire off code while a long-running computation is still in flight. The underlying ZMQ socket isn’t safe to share across tasks, and there’s no built-in mechanism to route replies back to the correct caller when multiple requests are outstanding.\nconkernelclient solves this with ConKernelClient, a drop-in replacement for AsyncKernelClient that makes concurrent execute() calls safe. It patches Session.send to synchronise with the ZMQ I/O thread (preventing a race where two sends interleave), and spins up a dedicated reader task on the shell channel that demultiplexes incoming replies by message ID. Each execute(..., reply=True) call gets its own asyncio.Queue, so multiple coroutines can await their replies independently without interfering with each other.",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "conkernelclient",
+    "section": "Installation",
+    "text": "Installation\nInstall from pypi\n$ pip install conkernelclient",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "conkernelclient",
+    "section": "How to use",
+    "text": "How to use\n\nfrom conkernelclient import *\n\nThe main entry point is ConKernelManager, a drop-in replacement for AsyncKernelManager that creates ConKernelClient instances. Start a kernel and connect a client in the usual way:\n\nimport asyncio\nfrom jupyter_client.session import Session\n\n\nkm = ConKernelManager(session=Session(key=b'x'))\nawait km.start_kernel()\nkc = await km.client().start_channels()\nawait kc.is_alive()\n\nTrue\n\n\nOnce connected, execute() works like the standard client. Pass reply=True to await the shell reply, or reply=False (the default) to fire-and-forget and collect results later via get_pubs:\n\nr = await kc.execute('2+1', timeout=1, reply=True)\nr['content']['status']\n\n'ok'\n\n\nThe key feature is safe concurrent execution. Multiple execute(..., reply=True) calls can be outstanding simultaneously — each gets its own asyncio.Queue, and a background reader task routes replies by message ID:\n\nfrom fastcore.test import test_eq\n\n\na = kc.execute('x=2', reply=True)\nb = kc.execute('y=3', reply=True)\nr = await asyncio.wait_for(asyncio.gather(a, b), timeout=2)\ntest_eq(len(r), 2)\nr[0]['parent_header']['msg_id']\n\n'8c84fe1c-20242a1940eecfc5a1a31500_61486_3'\n\n\nBoth replies arrive independently, each routed to the correct caller. Without ConKernelClient, the second execute would either block waiting for the first to finish, or the replies would get crossed.\nAs usual, we clean up when we’re done:\n\nif await km.is_alive():\n    kc.stop_channels()\n    await km.shutdown_kernel()",
+    "crumbs": [
+      "conkernelclient"
+    ]
+  },
+  {
+    "objectID": "ops.html",
+    "href": "ops.html",
+    "title": "ops",
+    "section": "",
+    "text": "conkernelclient.core makes concurrent execute() calls safe; this module adds the operations every client ends up needing on top of that: request-scoped iopub collection, execute-and-drain composites, nbformat-style output conversion, interrupt, generic shell/control requests, and a kernel lifecycle context manager. It distills helpers that grew up independently in ipymini’s test suite and solveit’s gateway, keeping the strongest implementation of each.\nOne caveat applies throughout: shell replies are demultiplexed per-request by ConKernelClient, but iopub is a single broadcast stream. iopub_drain filters it by parent msg_id and discards what it skips, so run one drain at a time. Concurrent executes are fine; concurrent drains are not.",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#imports",
+    "href": "ops.html#imports",
+    "title": "ops",
+    "section": "Imports",
+    "text": "Imports\n\nfrom fastcore.test import test_eq, test_fail\nfrom jupyter_client.session import Session",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#message-basics",
+    "href": "ops.html#message-basics",
+    "title": "ops",
+    "section": "Message basics",
+    "text": "Message basics\n\nkm = ConKernelManager(session=Session(key=b'x'))\nawait km.start_kernel()\nkc = await km.client().start_channels()\nawait kc.is_alive()\n\nTrue\n\n\n\nsource\n\niter_timeout\ndef iter_timeout(\n    timeout:NoneType=None, default:int=10\n):\nYield remaining seconds until timeout expires, using monotonic time\nEvery reply carries its request’s msg_id in the parent header; all routing below keys on it. iter_timeout drives every wait loop in this module: it yields the time still available, so a loop body can pass a shrinking timeout to each blocking call.\n\nr = await kc.execute('1+1', reply=True)\ntest_eq(parent_id(r), r['parent_header']['msg_id'])\nassert parent_id({}) is None",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#iopub-collection",
+    "href": "ops.html#iopub-collection",
+    "title": "ops",
+    "section": "Iopub collection",
+    "text": "Iopub collection\n\nsource\n\nConKernelClient.iopub_drain\nasync def iopub_drain(\n    msg_id, timeout:int=10\n):\nCollect iopub messages parented to msg_id until its idle status arrives. Other requests’ messages are discarded: one drain at a time\n\nsource\n\n\nConKernelClient.iopub_flush\nasync def iopub_flush(\n    timeout:float=0.1\n):\nDiscard all pending iopub messages, e.g. leftovers from fire-and-forget executes\niopub_flush is the counterpart for when you don’t want collection: clear the backlog before starting a push-based consumer or a fresh interaction.\n\nkc.execute('print(\"junk\")')\nawait kc.iopub_flush()\ntry:\n    await kc.get_iopub_msg(timeout=0.1)\n    assert False, 'iopub should be empty after flush'\nexcept Empty: pass\n\nCollecting a request’s output means draining iopub until the kernel publishes the idle status for that request - that is the protocol’s “this request is done publishing” signal, far more reliable than sweeping whatever is pending after a fixed delay.\n\nmid = kc.execute('print(\"hi\"); 42')\nmsgs = await kc.iopub_drain(mid)\ntest_eq([m['msg_type'] for m in msgs if m['msg_type']!='status'], ['execute_input', 'stream', 'execute_result'])",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#outputs",
+    "href": "ops.html#outputs",
+    "title": "ops",
+    "section": "Outputs",
+    "text": "Outputs\n\nsource\n\niopub_streams\ndef iopub_streams(\n    msgs, name:NoneType=None\n):\nThe stream messages in msgs, optionally only stream name (‘stdout’/‘stderr’)\n\ntest_eq([m['msg_type'] for m in iopub_msgs(msgs, 'execute_result')], ['execute_result'])\ntest_eq([m['msg_type'] for m in iopub_msgs(msgs, output_types)], ['stream', 'execute_result'])\ntest_eq(iopub_streams(msgs)[0]['content']['text'], 'hi\\n')\ntest_eq(iopub_streams(msgs, 'stderr'), [])\n\nRaw-message filters for when the protocol wrapping is wanted (parent ids, per-message metadata) - msgs2outs is the lossy convenience, these are the lossless ones.\nIopub messages carry protocol wrapping (headers, status chatter, execute_input echoes) that consumers rarely want. fastcore.nbio.msgs2outs reduces them to the same output dicts a notebook file stores (mirroring nbformat.v4.output_from_msg without the dependency, minus schema validation), and exec_outs below composes it with a drain. output_types names the message types that carry outputs, for callers filtering by hand.\n\nouts = msgs2outs(msgs)\ntest_eq(outs[0], dict(output_type='stream', name='stdout', text='hi\\n'))\ntest_eq(outs[1]['data']['text/plain'], '42')",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#execute-composites",
+    "href": "ops.html#execute-composites",
+    "title": "ops",
+    "section": "Execute composites",
+    "text": "Execute composites\n\nsource\n\nConKernelClient.exec_outs\nasync def exec_outs(\n    code, timeout:int=10, **kw\n):\nExecute code and return just its nbformat-style outputs\n\nsource\n\n\nConKernelClient.exec_ok\nasync def exec_ok(\n    code, timeout:int=10, **kw\n):\nexec_drain, asserting the reply status is ok\n\nsource\n\n\nConKernelClient.exec_drain\nasync def exec_drain(\n    code, timeout:int=10, **kw\n):\nExecute code; return (reply, outputs) where outputs are the request’s iopub messages\nThe composites cover the three common shapes: full protocol detail (exec_drain), tests that just need success (exec_ok), and consumers that only want outputs (exec_outs).\n\nreply, outputs = await kc.exec_ok('x = 3; x')\ntest_eq(reply['content']['status'], 'ok')\ntest_eq((await kc.exec_outs('print(x*2)')), [dict(output_type='stream', name='stdout', text='6\\n')])\nreply, _ = await kc.exec_drain('1/0')\ntest_eq(reply['content']['ename'], 'ZeroDivisionError')",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#expression-values",
+    "href": "ops.html#expression-values",
+    "title": "ops",
+    "section": "Expression values",
+    "text": "Expression values\n\nsource\n\nConKernelClient.eval_expr\nasync def eval_expr(\n    expr:str, code:str='', timeout:int=10, **kw\n):\nEvaluate expr in the kernel (optionally after running code) and return its value: parsed via literal_eval when its repr allows, else the repr string. Raises EvalError if the kernel raises\n\nsource\n\n\nConKernelClient.user_exprs\nasync def user_exprs(\n    exprs:dict, code:str='', timeout:int=10, **kw\n):\nRun code and evaluate each of the exprs expressions in the same round trip; returns the reply content (statuses and mimebundles unparsed)\n\nsource\n\n\nparse_expr\ndef parse_expr(\n    s\n):\nThe literal_eval of s when its form allows, else s unchanged\n\nsource\n\n\nEvalError\ndef EvalError(\n    *args, **kwargs\n):\nAn eval_expr expression raised in the kernel\nThe user_expressions round trip: one execute carries the expression, the kernel evaluates it after the (empty) cell and returns its repr inside the execute_reply - no iopub involved, so it works cleanly alongside streaming output. Values whose repr is not literal_eval-able come back as that repr string. This is the general core of solveit’s richer eval RPC.\n\nawait kc.exec_ok(\"v = [1, 'a', {'b': 2}]\")\ntest_eq(await kc.eval_expr('v'), [1, 'a', {'b': 2}])\ntest_eq(await kc.eval_expr('w * 2', code='w = 21'), 42)\ncts = await kc.user_exprs({'a': 'v[0]', 'b': 'len(v)'})\ntest_eq(cts['status'], 'ok')\ntest_eq(parse_expr(cts['user_expressions']['a']['data']['text/plain']), 1)\ntest_eq(parse_expr(cts['user_expressions']['b']['data']['text/plain']), 3)\ntest_eq(await kc.eval_expr('sum(v[2].values())'), 2)\nr = await kc.eval_expr('print')\nassert isinstance(r, str) and 'print' in r, r\ntry:\n    await kc.eval_expr('nope_undefined')\n    assert False, 'expected EvalError'\nexcept EvalError as e: assert 'NameError' in str(e)",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#calling-kernel-functions",
+    "href": "ops.html#calling-kernel-functions",
+    "title": "ops",
+    "section": "Calling kernel functions",
+    "text": "Calling kernel functions\neval turns the user_expressions round trip into a function call: run func(*args, **kw) kernel-side (awaiting coroutines), bring the result back by repr, and reconstruct it client-side — try_eval wraps primitive results in a dynamic class named after the kernel-side type, so Markdown reprs still compare equal while remembering what they were. _call=False skips the call and evaluates func as a bare expression. The whole family – eval, ipy (get_ipython() methods), the generated service methods mirroring what ipyfuncs patches onto the kernel’s shell (sig_help, get_schemas, ranked_complete, …), and xpush/retr/xenv – is inherited from jupywire’s EvalOps mixin over this module’s reply; _pre_ipy below adds the zmq liveness check. priority= sends kernmini’s priority: 1 execute metadata, so the call overtakes queued work on a kernel that honours it; ipykernel ignores the key. The service methods default it on.\n\nsource\n\nConKernelClient.reply\ndef reply(\n    code, # A string of code in the kernel's language.\n    user_expressions:NoneType=None, # A dict mapping names to expressions to be evaluated in the user's dict\n    allow_stdin:NoneType=None, # Flag for whether the kernel can send stdin requests to frontends.\n    cts_typ:str='code', timeout:int=None, msg_id:NoneType=None, **kw\n):\nThe awaited transport seam: run code, returning an awaitable of the execute_reply message.\n\nawait kc.reply('def add(a, b): return a+b')\ntest_eq(await kc.eval('add', a=10, b=20), 30)\n\nawait kc.reply('async def add(a, b): return a+b')\ntest_eq(await kc.eval('add', a=10, b=20, _literal=False), '30')\n\nawait kc.reply('a = [1,2,3]')\ntest_eq(await kc.eval('a', _call=False), [1,2,3])\n\ntest_eq((await kc.eval('add', a=30, b=40, _literal=False), await kc.eval('add', a=30, b=40)), ('70', 70))\n\n\nawait kc.reply('from fastcore.xml import Safe')\nr = await kc.eval('Safe', 'hello')\nisinstance_str(r, 'Safe')\n\nTrue\n\n\n\nawait kc.reply('from IPython.display import Markdown')\nawait kc.eval('Markdown', data=r\"*a\\a*\", _literal=False)\n\n'*a\\\\a*'\n\n\nWith literal=False, eval() skips literal_eval on the result:\nNot evaluating allows getting non-builtin types as results:\n\nawait kc.reply(\"\"\"\nclass Foo:\n  def __init__(self, val: int): self.val = val\n  def __repr__(self): return f'Foo instance with a value of {self.val}'\n  \ndef make_foo(): return Foo(123)\n\"\"\")\nresult = await kc.eval(\"Foo\", val=99, _literal=False)\nassert 'Foo instance' in result\ntest_eq(type(result), str)\nresult, type(result)\n\n('Foo instance with a value of 99', str)\n\n\n\n_r = await kc.eval('f', _timeout=10)\nassert 'NameError' in _r, f'Expected NameError, got: {_r}'\nprint(_r)\n\n---------------------------------------------------------------------------\nNameError                                 Traceback (most recent call last)\nCell In[9], line 2\n      1 import asyncio\n----&gt; 2 __254d11bb = f(*(), **{})\n      3 if asyncio.iscoroutine(__254d11bb): __254d11bb = await __254d11bb\n\nNameError: name 'f' is not defined\n\n\nThe _ipy_funcs services live kernel-side in ipyfuncs; importing it is the whole setup, so this battery doesn’t depend on a venv-level IPython config:\n\nawait kc.exec_ok('import ipyfuncs')\n\n\nawait kc.reply('''def range_ex(\n    a:str  # some param\n):\n    \"some func docstring\"\n    ...''')\n\n{'header': {'msg_id': 'f40f78a3-249cb73f14dbb4b0d1640fd1_89345_172',\n  'msg_type': 'execute_reply',\n  'username': 'jhoward',\n  'session': 'f40f78a3-249cb73f14dbb4b0d1640fd1',\n  'date': datetime.datetime(2026, 8, 3, 7, 18, 32, 384722, tzinfo=tzutc()),\n  'version': '5.4'},\n 'msg_id': 'f40f78a3-249cb73f14dbb4b0d1640fd1_89345_172',\n 'msg_type': 'execute_reply',\n 'parent_header': {'msg_id': 'fc18205f-f426f5401e4dca936a58e529_89336_38',\n  'msg_type': 'execute_request',\n  'username': 'jhoward',\n  'session': 'fc18205f-f426f5401e4dca936a58e529',\n  'date': datetime.datetime(2026, 8, 3, 7, 18, 32, 383610, tzinfo=tzutc()),\n  'version': '5.4'},\n 'metadata': {},\n 'content': {'status': 'ok',\n  'execution_count': 21,\n  'user_expressions': {},\n  'payload': []},\n 'buffers': []}\n\n\n\nawait kc.eval('get_ipython().ranked_complete', code='rang', line_no=1, col_no=5, _timeout=0.2)\n\n[{'text': 'range',\n  'type': 'class',\n  'signature': '',\n  'start': 0,\n  'end': 4,\n  'mod': None,\n  'rank': 5},\n {'text': 'range_ex',\n  'type': 'function',\n  'signature': '(a: str)',\n  'start': 0,\n  'end': 4,\n  'mod': '__main__',\n  'rank': 2}]\n\n\n\nawait kc.ranked_complete(code='rang', line_no=1, col_no=5)\n\n[{'text': 'range',\n  'type': 'class',\n  'signature': '',\n  'start': 0,\n  'end': 4,\n  'mod': None,\n  'rank': 5},\n {'text': 'range_ex',\n  'type': 'function',\n  'signature': '(a: str)',\n  'start': 0,\n  'end': 4,\n  'mod': '__main__',\n  'rank': 2}]\n\n\n\nawait kc.reply('a=1')\ntest_eq(await kc.get_vars(vs=['a']), {'a': 1})\nawait kc.user_items(max_len=100)\n\n({'a': '1',\n  'payl': \"{'source': 'testing', 'foo': 'bar'}\",\n  'pm': '&lt;IPython.core.payload.PayloadManager object&gt;',\n  'user_input': 'bbb',\n  'test_var': '42',\n  'another_var': 'hello'},\n {'add': '(a, b)', 'make_foo': '()', 'range_ex': '(a: str)'})\n\n\n\nres = await kc.sig_help(code='range(', line_no=1, col_no=6)\nres[0]\n\n{'label': 'class range',\n 'typ': 'class',\n 'mod': 'builtins',\n 'doc': 'range(stop: SupportsIndex, /)\\nrange(start: SupportsIndex, stop: SupportsIndex, step: SupportsIndex=1, /)\\n\\nrange(stop) -&gt; range object\\nrange(start, stop[, step]) -&gt; range object\\n\\nReturn an object that produces a sequence of integers from start (inclusive)\\nto stop (exclusive) by step.  range(i, j) produces i, i+1, i+2, ..., j-1.\\nstart defaults to 0, and stop is omitted!  range(4) produces 0, 1, 2, 3.\\nThese are exactly the valid indices for a list of 4 elements.\\nWhen step is given, it specifies the increment (or decrement).',\n 'idx': 0,\n 'params': [{'name': 'stop', 'desc': 'param stop: SupportsIndex'}]}\n\n\n\nawait kc.get_schemas(fs=['range_ex'])\n\n{'range_ex': {'type': 'function',\n  'function': {'name': 'range_ex',\n   'description': 'some func docstring',\n   'parameters': {'type': 'object',\n    'properties': {'a': {'description': 'some param', 'type': 'string'}},\n    'required': ['a']}}}}\n\n\n\nkc.xpush(asdf=4)\n\n\ntest_eq(await kc.retr('asdf'), 4)\n\n\nkc.xenv(hi='johno')\ntest_eq(await kc.eval('__os.environ[\"hi\"]', _call=False), 'johno')",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#generic-requests",
+    "href": "ops.html#generic-requests",
+    "title": "ops",
+    "section": "Generic requests",
+    "text": "Generic requests\n\nsource\n\nConKernelClient.control_request\nasync def control_request(\n    msg_type, timeout:int=10, **content\n):\nSend a request on the control channel and await its matching reply\n\nsource\n\n\nConKernelClient.shell_request\ndef shell_request(\n    msg_type, timeout:int=10, reply:bool=True, buffers:NoneType=None,\n    msg_id:NoneType=None, # Override the auto-generated message id\n    subshell_id:NoneType=None, # Route via this subshell (header field)\n    metadata:NoneType=None, # Message metadata (e.g. ipywidgets control-comm version check)\n    **content\n):\nSend an arbitrary shell request, routed through the reply reader like execute. Returns a coroutine for the reply, or just the msg_id when reply=False (for fire-and-forget types like comm_open that never get replies)\nConKernelClient’s background reader consumes every shell message, so a bare get_shell_msg would race it and lose. Any non-execute shell request (kernel_info_request, complete_request, …) must therefore register with the same routing table execute uses - that is what shell_request does. Pass reply=False for fire-and-forget message types the kernel never answers (comm_open, comm_msg, comm_close), and buffers for binary payloads. Control-channel replies have no reader competing for them, so control_request matches by parent id directly. Note control requests should not be issued concurrently with each other.\n\nr = await kc.shell_request('kernel_info_request')\ntest_eq(r['header']['msg_type'], 'kernel_info_reply')\nr = await kc.control_request('kernel_info_request')\ntest_eq(r['header']['msg_type'], 'kernel_info_reply')\n\nRead the input_request from the stdin channel with get_stdin_msg, then answer it; the blocked execute’s reply follows.\n\nsource\n\n\nConKernelClient.input_reply\nasync def input_reply(\n    value:str\n):\nAnswer the kernel’s pending input_request (from input() in an execute sent with allow_stdin=True)\n\nc = kc.execute(\"x = input('name? ')\", reply=True, timeout=10, allow_stdin=True)\nmsg = await kc.get_stdin_msg(timeout=10)\ntest_eq(msg['header']['msg_type'], 'input_request')\nawait kc.input_reply('Ada')\ntest_eq((await c)['content']['status'], 'ok')\ntest_eq((await kc.exec_outs('x'))[0]['data']['text/plain'], \"'Ada'\")\n\n\ncode = \"\"\"def _t(comm, msg):\n    global nbuf; nbuf = len(msg.get('buffers', []))\nget_ipython().kernel.comm_manager.register_target('t', _t)\n\"\"\"\nawait kc.exec_ok(code)\nmid = kc.shell_request('comm_open', reply=False, comm_id='c1', target_name='t', data={}, buffers=[b'12345'])\nassert isinstance(mid, str)\nawait kc.exec_ok('import time; time.sleep(0.2)')\ntest_eq((await kc.exec_outs('nbuf'))[0]['data']['text/plain'], '1')\n\n\ncode = \"\"\"def _tm(comm, msg):\n    global nmd; nmd = msg.get('metadata')\nget_ipython().kernel.comm_manager.register_target('tm', _tm)\n\"\"\"\nawait kc.exec_ok(code)\nkc.shell_request('comm_open', reply=False, comm_id='cm1', target_name='tm', data={}, metadata={'version':'2.1.0'})\nawait kc.exec_ok('import time; time.sleep(0.2)')\ntest_eq((await kc.exec_outs('nmd'))[0]['data']['text/plain'], \"{'version': '2.1.0'}\")",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#proxies",
+    "href": "ops.html#proxies",
+    "title": "ops",
+    "section": "Proxies",
+    "text": "Proxies\n\nsource\n\nConKernelClient.ctl\ndef ctl():\nControl requests as methods: await kc.ctl.shutdown(restart=True) sends shutdown_request\n\nsource\n\n\nConKernelClient.cmd\ndef cmd():\nShell requests as methods: await kc.cmd.history(...) sends history_request\n\nsource\n\n\nConKernelClient.dap\ndef dap():\nDAP debug requests as methods. Stateful (seq counter), so cached per client, unlike cmd/ctl\ndap speaks the Debug Adapter Protocol over debug_request control messages. A trailing underscore escapes Python keywords (kc.dap.continue_(...) sends the DAP continue command); full=True returns the whole reply message instead of just its content.\nThe proxies make one-off protocol requests read like methods without hand-assembling messages. They are stateless, so no caching is needed.\n\nr = await kc.cmd.complete(code='pri', cursor_pos=3)\nassert 'print' in r['content']['matches']\nr = await kc.cmd.is_complete(code='def f():')\ntest_eq(r['content']['status'], 'incomplete')\n\n\nr = await kc.shell_request('kernel_info_request', msg_id='fixed-id-1')\ntest_eq(parent_id(r), 'fixed-id-1')\nr = await kc.dap.debugInfo()\ntest_eq(r['command'], 'debugInfo')\nassert r['success']\nr2 = await kc.dap.debugInfo(full=True)\ntest_eq(parent_id(r2), parent_id(r2))  # full message shape\nassert r2['header']['msg_type'] == 'debug_reply'",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#interrupt",
+    "href": "ops.html#interrupt",
+    "title": "ops",
+    "section": "Interrupt",
+    "text": "Interrupt\n\nsource\n\nConKernelClient.interrupt\nasync def interrupt(\n    timeout:int=5\n):\nInterrupt the running request via interrupt_request on control; returns the reply\nThe interrupted execute returns an error reply with ename KeyboardInterrupt, and the kernel stays usable. (Solveit’s gateway historically followed the interrupt with an empty execute to wake a parked recv; the Session.send patch in core addresses that wake-up at the transport level, so it is not repeated here.)\n\ntask = asyncio.ensure_future(kc.execute('import time; time.sleep(30)', reply=True, timeout=15))\nawait asyncio.sleep(0.5)\nr = await kc.interrupt()\ntest_eq(r['header']['msg_type'], 'interrupt_reply')\nreply = await task\ntest_eq(reply['content']['ename'], 'KeyboardInterrupt')\ntest_eq((await kc.exec_outs('40+2'))[0]['data']['text/plain'], '42')",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#lifecycle",
+    "href": "ops.html#lifecycle",
+    "title": "ops",
+    "section": "Lifecycle",
+    "text": "Lifecycle\n\nsource\n\nrun_kernel\ndef run_kernel(\n    kernel_name:str='python3', # Kernelspec name to launch, or display name when `argv` is given\n    argv:NoneType=None, # Kernel argv; bypasses kernelspec discovery when provided\n    manager_cls:MetaHasTraits=ConKernelManager, # Manager class, e.g. a subclass customizing launch\n    **kwargs\n):\nStart a named or direct-argv kernel, yielding (km, kc), and always shut it down\nA kernel normally reaches KernelManager through an installed kernelspec. Embedders and tests often already have the command they want to run, however, and should not need to install discovery metadata first. Pass argv to supply that command through an in-memory KernelSpec; KernelManager still owns connection-file creation, placeholder substitution, process launch, and shutdown. Here ipymini is launched directly, independently of the machine’s kernelspec registry:\n\nasync with run_kernel('ipymini', ['ipymini', '-f', '{connection_file}']) as (_, direct):\n    test_eq((await direct.exec_outs('6*7'))[0]['data']['text/plain'], '42')\n\n\nsource\n\n\nreconnect\nasync def reconnect(\n    km, kc:NoneType=None\n):\nRestart km’s kernel (fresh process, state discarded) and return a newly connected client, stopping kc if given\n\nasync with run_kernel() as (km3, kc3):\n    await kc3.exec_ok('x = 42')\n    pid1 = km3.provisioner.pid\n    kc3 = await reconnect(km3, kc3)\n    assert km3.provisioner.pid != pid1\n    reply, _ = await kc3.exec_drain('x')\n    test_eq(reply['content']['ename'], 'NameError')\n    test_eq((await kc3.exec_outs('1+1'))[0]['data']['text/plain'], '2')\n\nAfter a restart the old client’s channels and routed-reply reader are stale, so reconnect hands back a fresh client bound to the restarted process. State is gone: redo any imports/setup.\nThe context manager guarantees teardown even when a test body raises, which is what keeps a big protocol test suite from leaking kernel processes.\n\nasync with run_kernel() as (km2, kc2):\n    test_eq((await kc2.exec_outs('1+1'))[0]['data']['text/plain'], '2')\n    pid = km2.provisioner.pid\nassert not await km2.is_alive()",
+    "crumbs": [
+      "ops"
+    ]
+  },
+  {
+    "objectID": "ops.html#cleanup",
+    "href": "ops.html#cleanup",
+    "title": "ops",
+    "section": "Cleanup",
+    "text": "Cleanup\n\nif await km.is_alive():\n    kc.stop_channels()\n    await km.shutdown_kernel()",
+    "crumbs": [
+      "ops"
+    ]
+  }
+]
