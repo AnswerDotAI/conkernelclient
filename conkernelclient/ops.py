@@ -14,6 +14,7 @@ from fastcore.ansi import strip_ansi
 from fastcore.nbio import msgs2outs, preferred_out
 from .core import ConKernelClient, ConKernelManager, DeadKernelError
 from jupywire.ops import parent_id, iopub_msgs, output_types
+from jupyter_client.kernelspec import KernelSpec
 _all_ = ['parent_id', 'iopub_msgs', 'output_types']
 from contextlib import asynccontextmanager
 from ast import literal_eval
@@ -202,12 +203,15 @@ async def interrupt(self:ConKernelClient, timeout=5):
 # %% ../nbs/01_ops.ipynb #edaf42c9
 @asynccontextmanager
 async def run_kernel(
-    kernel_name='python3', # Kernelspec name to launch
+    kernel_name='python3', # Kernelspec name to launch, or display name when `argv` is given
+    argv=None, # Kernel argv; bypasses kernelspec discovery when provided
     manager_cls=ConKernelManager, # Manager class, e.g. a subclass customizing launch
     **kwargs # Passed to `start_kernel` (e.g. `env`, `cwd`)
 ):
-    "Start a kernel, yield `(km, kc)` with channels running, and always shut both down"
-    km = manager_cls(kernel_name=kernel_name)
+    "Start a named or direct-argv kernel, yielding `(km, kc)`, and always shut it down"
+    manager_kwargs = dict(kernel_name=kernel_name)
+    if argv is not None: manager_kwargs['kernel_spec'] = KernelSpec(argv=argv, display_name=kernel_name)
+    km = manager_cls(**manager_kwargs)
     await km.start_kernel(**kwargs)
     kc = await km.client().start_channels()
     try: yield km, kc

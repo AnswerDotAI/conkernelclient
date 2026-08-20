@@ -186,5 +186,8 @@ async def astop_channels(self:ConKernelClient):
 # %% ../nbs/00_core.ipynb #b828c222
 class ConKernelManager(AsyncKernelManager):
     client_class,client_factory = ConKernelClient,Type(ConKernelClient)
+    def __init__(self, *args, kernel_spec=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if kernel_spec is not None: self._kernel_spec = kernel_spec
     @default('transport_encryption')
     def _transport_encryption_default(self): return 'auto'

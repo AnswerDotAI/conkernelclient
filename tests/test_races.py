@@ -37,11 +37,10 @@ class LockedClient(ConKernelClient):
 class LockedKernelManager(ConKernelManager):
     client_class,client_factory = LockedClient,Type(LockedClient)
 
-
 def test_burst_replies_under_send_jitter():
     "20 pending replies at once, every send jittered: the reader must route each reply to its waiter."
     async def _run():
-        async with run_kernel(kernel_name="ipymini", manager_cls=LockedKernelManager) as (km, kc):
+        async with run_kernel("ipymini", ["ipymini", "-f", "{connection_file}"], manager_cls=LockedKernelManager) as (km, kc):
             reps = [kc.execute(f"x{i} = {i}; x{i}", reply=True, timeout=30) for i in range(20)]
             for i, r in enumerate(await asyncio.gather(*reps)): assert r["content"]["status"] == "ok", (i, r["content"])
     asyncio.run(_run())
