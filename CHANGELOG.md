@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.20
+
+### New Features
+
+- Rebuild client on jupywire.route: router pumps per channel, reply/run/request seams, and synthesized dead status for kernel death ([#17](https://github.com/AnswerDotAI/conkernelclient/issues/17))
+
+
 ## 0.0.19
 
 ### New Features
