@@ -18,7 +18,7 @@ classifiers = [
 dependencies = [
   'jupyter_client',
   'fastcore>=2.1.17',
-  'jupywire>=0.1.5',
+  'jupywire>=0.1.7',
 ]
 
 [project.optional-dependencies]

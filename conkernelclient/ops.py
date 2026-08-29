@@ -29,7 +29,7 @@ def iter_timeout(timeout=None, default=default_timeout):
 @patch
 async def exec_drain(self:ConKernelClient, code, timeout=default_timeout, **kw):
     "Execute `code`; return `(reply, outputs)` where outputs are the request's iopub messages"
-    msgs = await self.run(code, timeout=timeout, **kw)
+    msgs = [m async for m in self.run(code, timeout=timeout, **kw)]
     reply = next(m for m in msgs if m['msg_type'] == 'execute_reply')
     return reply, [m for m in msgs if m['channel'] == 'iopub']
 
