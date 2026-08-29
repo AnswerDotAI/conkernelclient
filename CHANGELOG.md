@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.21
+
+### New Features
+
+- Migrate exec_drain and the run lessons to the streaming run() ([#18](https://github.com/AnswerDotAI/conkernelclient/pull/18)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.20
 
 ### New Features
