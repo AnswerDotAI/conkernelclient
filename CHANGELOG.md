@@ -2,11 +2,18 @@
 
 <!-- do not remove -->
 
+## 0.0.22
+
+### Bugs Squashed
+
+- Rename eval kwargs to trailing-underscore form and route helper calls through the sidecar with `sidecar_` opt-out ([#19](https://github.com/AnswerDotAI/conkernelclient/issues/19))
+
+
 ## 0.0.21
 
 ### New Features
 
-- Migrate exec_drain and the run lessons to the streaming run() ([#18](https://github.com/AnswerDotAI/conkernelclient/pull/18)), thanks to [@jph00](https://github.com/jph00)
+- Migrate `exec_drain` and the run lessons to the streaming run() ([#18](https://github.com/AnswerDotAI/conkernelclient/pull/18)), thanks to [@jph00](https://github.com/jph00)
 
 
 ## 0.0.20
