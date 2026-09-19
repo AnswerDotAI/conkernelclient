@@ -66,7 +66,7 @@ class ConKernelClient(RouterOps, EvalOps, AsyncKernelClient):
 
 # %% ../nbs/00_core.ipynb #fd6e6aa9
 @patch
-async def _route(self:ConKernelClient, msg):
+async def _deliver(self:ConKernelClient, msg):
     r = self.route(msg)
     if inspect.isawaitable(r): await r
 
@@ -75,11 +75,11 @@ async def _pump(self:ConKernelClient, name):
     "Drain one zmq channel into the router; a socket error is transport loss, delivered as the dead status."
     ch = getattr(self, f'{name}_channel')
     try:
-        while True: await self._route(dict(await ch.get_msg(timeout=None), channel=name))
+        while True: await self._deliver(dict(await ch.get_msg(timeout=None), channel=name))
     except asyncio.CancelledError: raise
     except Exception as e:
         _log.warning(f"{name} pump died: {e}")
-        await self._route(_dead_status())
+        await self._deliver(_dead_status())
 
 @patch
 async def _watch_hb(self:ConKernelClient):
@@ -88,7 +88,7 @@ async def _watch_hb(self:ConKernelClient):
     while True:
         await asyncio.sleep(self.hb_channel.time_to_dead)
         misses = 0 if self.hb_channel.is_beating() else misses + 1
-        if misses >= 3: return await self._route(_dead_status())
+        if misses >= 3: return await self._deliver(_dead_status())
 
 # %% ../nbs/00_core.ipynb #394db3b2
 @patch
