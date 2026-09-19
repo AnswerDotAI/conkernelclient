@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.23
+
+### Bugs Squashed
+
+- Rename ConKernelClient.`_route` to `_deliver` to avoid confusion with the user-supplied route handler ([#20](https://github.com/AnswerDotAI/conkernelclient/issues/20))
+
+
 ## 0.0.22
 
 ### Bugs Squashed
